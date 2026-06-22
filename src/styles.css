@@ -41,6 +41,8 @@ button:hover { background: #334155; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.primary:hover { background: var(--accent-soft); }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
+.cat-btn { font-size: 13px; padding: 8px 12px; text-align: left; }
+.cat-btn:hover { border-color: var(--accent); }
 
 input, select {
   font-family: inherit;

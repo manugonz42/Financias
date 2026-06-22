@@ -33,6 +33,8 @@ export interface ParsedAccount {
   last4: string;
   /** Nombre del titular (se usa para detectar traspasos internos). */
   holder: string;
+  /** Nombre a mostrar para la cuenta (si el parser lo sabe, p.ej. el banco). */
+  name?: string;
 }
 
 export interface ParsedTransaction {

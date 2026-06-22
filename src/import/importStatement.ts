@@ -3,13 +3,15 @@
 
 import { extractPages } from "./loadPdf";
 import { parseOpenbankStatement } from "./openbankParser";
+import { parseUnicajaStatement, isUnicajaStatement } from "./unicajaParser";
 import { categorize, compileRules } from "./categorize";
+import { loadRules } from "../data/rules";
 import { upsertAccount } from "../data/accounts";
 import { categoryIdMap } from "../data/categories";
 import { getOwnerName } from "../data/settings";
 import { setSetting } from "../data/settings";
 import { dedupeKey } from "../lib/text";
-import { getDB, exec, query } from "../db/database";
+import { getDB, exec } from "../db/database";
 import type { AccountType, ImportResult } from "../types";
 
 const ACCOUNT_LABEL: Record<AccountType, string> = {
@@ -22,16 +24,22 @@ export async function importStatementFromBytes(
   filename: string,
 ): Promise<ImportResult> {
   const pages = await extractPages(bytes);
-  const { account, transactions, warnings } = parseOpenbankStatement(pages);
+
+  // Detección de banco: Unicaja u Openbank (por defecto).
+  const fullText = pages.map((p) => p.map((t) => t.str).join(" ")).join(" ");
+  const { account, transactions, warnings } = isUnicajaStatement(fullText)
+    ? parseUnicajaStatement(pages)
+    : parseOpenbankStatement(pages);
 
   if (!account.number) {
     throw new Error(
-      "No se reconoció la cabecera de la cuenta. ¿Es un extracto de movimientos de Openbank?",
+      "No se reconoció la cabecera de la cuenta. ¿Es un extracto de movimientos de Openbank o Unicaja?",
     );
   }
 
+  const accountName = account.name ?? ACCOUNT_LABEL[account.type];
   const accountId = await upsertAccount({
-    name: ACCOUNT_LABEL[account.type],
+    name: accountName,
     type: account.type,
     number: account.number,
     last4: account.last4,
@@ -45,15 +53,16 @@ export async function importStatementFromBytes(
     await setSetting("owner_name", owner);
   }
 
-  const rules = compileRules();
+  // Reglas desde la BD (sembradas + las creadas por el usuario al revisar).
+  const dbRules = await loadRules();
+  const rules = compileRules(dbRules.length ? dbRules : undefined);
   const catMap = await categoryIdMap();
 
-  await exec("INSERT INTO import_batches (filename, account_id, total) VALUES (?, ?, ?)", [
-    filename,
-    accountId,
-    transactions.length,
-  ]);
-  const batchId = (await query<{ id: number }>("SELECT last_insert_rowid() AS id"))[0].id;
+  const batchRes = await exec(
+    "INSERT INTO import_batches (filename, account_id, total) VALUES (?, ?, ?)",
+    [filename, accountId, transactions.length],
+  );
+  const batchId = Number(batchRes.lastInsertId);
 
   const db = await getDB();
   let nuevos = 0;
@@ -99,7 +108,7 @@ export async function importStatementFromBytes(
 
   return {
     filename,
-    accountName: ACCOUNT_LABEL[account.type],
+    accountName,
     accountType: account.type,
     total: transactions.length,
     nuevos,

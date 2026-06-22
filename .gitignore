@@ -6,7 +6,8 @@
 *.sqlite
 *.sqlite3
 *.db
-data/
+# Carpeta de datos/exports personales SOLO en la raíz (no afecta a src/data/)
+/data/
 # Ficheros de configuración con identificadores (nombre, IBAN, etc.)
 *.local.json
 config.local.*

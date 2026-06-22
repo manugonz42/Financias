@@ -26,11 +26,18 @@ export interface CompiledRule {
   subtype?: Subtype;
 }
 
-/** Compila y ordena las reglas por prioridad (menor primero). */
+/** Compila y ordena las reglas por prioridad (menor primero).
+ *  Las reglas con expresión regular inválida se descartan (no rompen el import). */
 export function compileRules(rules: RuleSeed[] = RULES): CompiledRule[] {
-  return [...rules]
-    .sort((a, b) => a.priority - b.priority)
-    .map((r) => ({ re: new RegExp(r.pattern), category: r.category, subtype: r.subtype }));
+  const out: CompiledRule[] = [];
+  for (const r of [...rules].sort((a, b) => a.priority - b.priority)) {
+    try {
+      out.push({ re: new RegExp(r.pattern), category: r.category, subtype: r.subtype });
+    } catch {
+      // patrón inválido (p. ej. regla escrita a mano): se ignora.
+    }
+  }
+  return out;
 }
 
 /** Extrae el comercio del concepto en bruto, según el tipo de movimiento. */
@@ -93,9 +100,11 @@ export function categorize(
   const merchant = extractMerchant(tx.concepto);
   const cardLast4 = extractCardLast4(tx.concepto);
 
-  // Detección de traspaso interno (transferencia hacia/desde el propio titular).
+  // Detección de traspaso interno: el tercero de la operación es el propio
+  // titular (transferencias/Bizum/ingresos entre tus cuentas, incluso en bancos
+  // que solo muestran el nombre sin la palabra "TRANSFERENCIA").
   let isInternal = false;
-  if (/TRANSFERENCIA/.test(n) && ownerNorm) {
+  if (ownerNorm) {
     const counterparty = merchant ? normalize(merchant) : n;
     isInternal = matchesOwner(counterparty, ownerNorm);
   }
@@ -103,7 +112,8 @@ export function categorize(
     return { category: INTERNAL_CATEGORY, subtype: "transferencia", merchant, cardLast4, isInternal };
   }
 
-  // Primera regla que casa (por prioridad).
+  // Primera regla que casa (por prioridad). Si la regla asigna la categoría
+  // interna (p. ej. ingresos de efectivo propios), se excluye del análisis.
   for (const rule of rules) {
     if (rule.re.test(n)) {
       return {
@@ -111,7 +121,7 @@ export function categorize(
         subtype: rule.subtype ?? inferSubtype(n),
         merchant,
         cardLast4,
-        isInternal: false,
+        isInternal: rule.category === INTERNAL_CATEGORY,
       };
     }
   }

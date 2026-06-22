@@ -35,3 +35,16 @@ export async function exec(sql: string, params: unknown[] = []) {
   const db = await getDB();
   return db.execute(sql, params);
 }
+
+/**
+ * Borra todos los datos importados (movimientos, lotes y cuentas) y el titular
+ * detectado, dejando la app como recién instalada. Conserva categorías, reglas,
+ * presupuestos y el layout del dashboard.
+ */
+export async function resetData(): Promise<void> {
+  const db = await getDB();
+  await db.execute("DELETE FROM transactions");
+  await db.execute("DELETE FROM import_batches");
+  await db.execute("DELETE FROM accounts");
+  await db.execute("DELETE FROM settings WHERE key = 'owner_name'");
+}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { AccountSelector, MonthSelect, ExcludeInternalToggle } from "../components/Controls";
 import { listTransactions, sumFlows, distinctMonths, distinctSubtypes } from "../data/transactions";
-import { reassignCategory } from "../data/categories";
+import { reassignCategoryByElement } from "../data/categories";
 import { exportTransactionsCSV } from "../lib/csv";
 import { formatEUR, formatDate } from "../lib/format";
 import type { Transaction, TxFilters } from "../types";
@@ -31,6 +31,7 @@ export function Movimientos() {
   const [rows, setRows] = useState<Transaction[]>([]);
   const [totals, setTotals] = useState({ expense: 0, income: 0 });
   const [loading, setLoading] = useState(false);
+  const [note, setNote] = useState("");
 
   useEffect(() => {
     void distinctMonths().then(setMonths);
@@ -66,7 +67,8 @@ export function Movimientos() {
   }, [filters, version]);
 
   async function changeCategory(txId: number, catId: number) {
-    await reassignCategory(txId, catId);
+    const n = await reassignCategoryByElement(txId, catId);
+    setNote(n > 1 ? `Actualizados ${n} movimientos con el mismo concepto.` : "");
     reload();
   }
 
@@ -112,6 +114,8 @@ export function Movimientos() {
         <span className="muted">Gastos: <b className="amount neg">{formatEUR(totals.expense)}</b></span>
         <span className="muted">Ingresos: <b className="amount pos">{formatEUR(totals.income)}</b></span>
         <span className="muted">Neto: <b className={totals.income - totals.expense >= 0 ? "amount pos" : "amount neg"}>{formatEUR(totals.income - totals.expense)}</b></span>
+        {note && <span className="spacer" />}
+        {note && <span style={{ color: "var(--accent)", fontSize: 13 }}>{note}</span>}
       </div>
 
       <div className="table-wrap">

@@ -4,9 +4,9 @@ import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Link } from "react-router-dom";
 import { useApp } from "../state/AppContext";
-import { AccountSelector, MonthSelect, ExcludeInternalToggle } from "../components/Controls";
+import { AccountSelector, DateRange, ExcludeInternalToggle } from "../components/Controls";
 import { WIDGETS } from "../widgets/widgets";
-import { distinctMonths } from "../data/transactions";
+import { dateBounds } from "../data/transactions";
 import { loadLayout, saveLayoutItem, setWidgetVisible } from "../data/dashboard";
 
 const Grid = WidthProvider(GridLayout);
@@ -31,8 +31,9 @@ function defaultLayout(): Layout[] {
 
 export function Dashboard() {
   const { accountId, excludeInternal, version } = useApp();
-  const [months, setMonths] = useState<string[]>([]);
-  const [month, setMonth] = useState("");
+  const [bounds, setBounds] = useState<{ min: string; max: string } | null>(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [layout, setLayout] = useState<Layout[]>([]);
   const [visible, setVisible] = useState<Set<string>>(new Set());
   const [ready, setReady] = useState(false);
@@ -40,10 +41,13 @@ export function Dashboard() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [ms, rows] = await Promise.all([distinctMonths(), loadLayout()]);
+      const [b, rows] = await Promise.all([dateBounds(), loadLayout()]);
       if (cancelled) return;
-      setMonths(ms);
-      setMonth((cur) => cur || ms[0] || "");
+      setBounds(b);
+      if (b) {
+        setFrom((cur) => cur || b.min);
+        setTo((cur) => cur || b.max);
+      }
       const byKey = new Map(rows.map((r) => [r.widget_key, r]));
       const vis = new Set<string>();
       const lay = defaultLayout().map((d) => {
@@ -89,7 +93,7 @@ export function Dashboard() {
     else void setWidgetVisible(key, 1);
   }
 
-  if (ready && months.length === 0) {
+  if (ready && !bounds) {
     return (
       <div>
         <div className="topbar"><h1>Dashboard</h1></div>
@@ -110,7 +114,14 @@ export function Dashboard() {
         <h1>Dashboard</h1>
         <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
           <AccountSelector />
-          <MonthSelect months={months} value={month} onChange={setMonth} />
+          <DateRange
+            from={from}
+            to={to}
+            onFrom={setFrom}
+            onTo={setTo}
+            min={bounds?.min}
+            max={bounds?.max}
+          />
           <ExcludeInternalToggle />
           {hidden.length > 0 && (
             <select
@@ -150,7 +161,8 @@ export function Dashboard() {
                   <Body
                     accountId={accountId}
                     excludeInternal={excludeInternal}
-                    month={month}
+                    from={from}
+                    to={to}
                     version={version}
                   />
                 </div>

@@ -42,6 +42,45 @@ export function MonthSelect({
   );
 }
 
+export function DateRange({
+  from,
+  to,
+  onFrom,
+  onTo,
+  min,
+  max,
+}: {
+  from: string;
+  to: string;
+  onFrom: (d: string) => void;
+  onTo: (d: string) => void;
+  min?: string;
+  max?: string;
+}) {
+  return (
+    <div className="row" style={{ gap: 6, alignItems: "center" }}>
+      <span className="muted" style={{ fontSize: 13 }}>Desde</span>
+      <input
+        type="date"
+        value={from}
+        min={min}
+        max={max}
+        onChange={(e) => onFrom(e.target.value)}
+        title="Fecha inicial"
+      />
+      <span className="muted" style={{ fontSize: 13 }}>hasta</span>
+      <input
+        type="date"
+        value={to}
+        min={min}
+        max={max}
+        onChange={(e) => onTo(e.target.value)}
+        title="Fecha final"
+      />
+    </div>
+  );
+}
+
 export function ExcludeInternalToggle() {
   const { excludeInternal, setExcludeInternal } = useApp();
   return (

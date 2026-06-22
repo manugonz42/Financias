@@ -44,17 +44,20 @@ export const CATEGORIES: CategorySeed[] = [
   { name: "Supermercado", kind: "gasto", color: "#22c55e", icon: "🛒" },
   { name: "Restauración", kind: "gasto", color: "#f97316", icon: "🍔" },
   { name: "Combustible", kind: "gasto", color: "#ef4444", icon: "⛽" },
+  { name: "Coche y Moto", kind: "gasto", color: "#7c3aed", icon: "🚗" },
   { name: "Suministros", kind: "gasto", color: "#eab308", icon: "💡" },
   { name: "Telefonía e Internet", kind: "gasto", color: "#06b6d4", icon: "📱" },
   { name: "Seguros", kind: "gasto", color: "#3b82f6", icon: "🛡️" },
   { name: "Mascotas", kind: "gasto", color: "#a855f7", icon: "🐾" },
   { name: "Transporte", kind: "gasto", color: "#14b8a6", icon: "🚇" },
+  { name: "Viajes", kind: "gasto", color: "#0891b2", icon: "✈️" },
   { name: "Compras y Tecnología", kind: "gasto", color: "#6366f1", icon: "📦" },
   { name: "Ocio y Digital", kind: "gasto", color: "#ec4899", icon: "🎮" },
   { name: "Salud y Farmacia", kind: "gasto", color: "#10b981", icon: "💊" },
   { name: "Impuestos y Tasas", kind: "gasto", color: "#64748b", icon: "🏛️" },
   { name: "Ropa", kind: "gasto", color: "#d946ef", icon: "👕" },
   { name: "Hogar", kind: "gasto", color: "#f59e0b", icon: "🏠" },
+  { name: "Alquiler", kind: "gasto", color: "#e11d48", icon: "🔑" },
   { name: "Cajero / Efectivo", kind: "gasto", color: "#0ea5e9", icon: "🏧" },
   { name: "Comisiones bancarias", kind: "gasto", color: "#94a3b8", icon: "🏦" },
   { name: "Otros gastos", kind: "gasto", color: "#9ca3af", icon: "•" },
@@ -80,10 +83,16 @@ export const RULES: RuleSeed[] = [
   { pattern: "DISPOSICION EN CAJERO", category: "Cajero / Efectivo", subtype: "cajero", priority: 5 },
 
   // Suministros / telefonía / seguros (recibos domiciliados)
-  { pattern: "ENERGIA XXI", category: "Suministros", subtype: "recibo", priority: 10 },
-  { pattern: "DIGI SPAIN", category: "Telefonía e Internet", subtype: "recibo", priority: 10 },
-  { pattern: "VERTI|MUTUA MADRILE", category: "Seguros", subtype: "recibo", priority: 10 },
+  { pattern: "ENERGIA XXI|\\bENDESA\\b|IBERDROLA|NATURGY|\\bENI\\b|REPSOL LUZ|HIDRALIA|AQUALIA|CANAL ISABEL|EMASESA|AGUAS DE|\\bEMACSA\\b", category: "Suministros", subtype: "recibo", priority: 10 },
+  { pattern: "DIGI SPAIN|MOVISTAR|VODAFONE|ORANGE|JAZZTEL|PEPEPHONE|O2 ", category: "Telefonía e Internet", subtype: "recibo", priority: 10 },
+  { pattern: "VERTI|MUTUA MADRILE|MAPFRE|ALLIANZ|AXA |LINEA DIRECTA|REALE |GENERALI|SANITAS|ADESLAS|ASISA", category: "Seguros", subtype: "recibo", priority: 10 },
   { pattern: "AYUNTAMIENTO DE MADRID|AYTO.?MADRID|AYTO MADRID", category: "Impuestos y Tasas", priority: 10 },
+  // Impuestos / Seguridad Social (Hacienda, autónomos)
+  { pattern: "A\\.?E\\.?A\\.?T|AGENCIA TRIBUTARIA|\\bHACIENDA\\b|\\bAUTONOMOS\\b|SEGURIDAD SOCIAL|\\bTGSS\\b|\\bRETA\\b|TASA |IMPUESTO", category: "Impuestos y Tasas", subtype: "recibo", priority: 11 },
+  // Comisión de mantenimiento de cuenta
+  { pattern: "^MANTENIMIENTO|COMISION MANTEN|MANTENIMIENTO CUENTA|COM\\.?\\s?MANTO", category: "Comisiones bancarias", subtype: "comision", priority: 44 },
+  // Devoluciones de Hacienda (ingreso)
+  { pattern: "DEVOLUCION(ES)? TRIBUTARIA|DEVOLUCION RENTA|ABONO A\\.?E\\.?A\\.?T", category: "Devoluciones y Abonos", subtype: "abono", priority: 11 },
 
   // Supermercados / alimentación
   {
@@ -107,6 +116,24 @@ export const RULES: RuleSeed[] = [
       "PLENERGY|PLENOIL|CEDIPSA|ATENOIL|BALLENOIL|TALOIL|MOEVE|PETROPRIX|GESLAMA|SURTIMOVIL|E\\. ?S\\.|EESS|E S ALCAMPO|ES MARIA AUXIL|PK SAN ANTONIO|GASOLINERA|US\\d+ PLEN|PLENOIL US",
     category: "Combustible",
     priority: 30,
+  },
+
+  // Coche y moto (mantenimiento, taller, ITV, peajes, parking, recambios…).
+  // No incluye combustible (Combustible) ni el seguro del vehículo (Seguros).
+  {
+    pattern:
+      "\\bTALLER\\b|\\bITV\\b|NEUMATICO|RUEDAS|RECAMBIO|AUTORECAMBIOS|MOTOS ESTEVARANZ|VINOTINTO MOTORS|CONCESIONARIO|MECANIC|\\bMOTOR\\b|AUTOMOVIL|MOTOCICLETA|PARKING|APARCAMIENTO|PARKIA|\\bSABA\\b|EMPARK|\\bONEPARK\\b|PEAJE|AUTOPISTA|\\bAUSOL\\b|\\bGRUA\\b|\\bDGT\\b|JEFATURA.*TRAFICO|MULTA",
+    category: "Coche y Moto",
+    priority: 36,
+  },
+
+  // Viajes (vuelos, hoteles, reservas, largo recorrido). Va antes que la
+  // restauración genérica para que "HOTEL …" no caiga en otra categoría.
+  {
+    pattern:
+      "RYANAIR|VUELING|IBERIA|\\bAIR EUROPA\\b|EASYJET|WIZZ ?AIR|\\bAENA\\b|AEROPUERTO|\\bHOTEL|HOSTEL|\\bHRS\\b|BOOKING|AIRBNB|EXPEDIA|TRIVAGO|EDREAMS|GOVOYAGES|ESKY|KIWI\\.COM|TRAINLINE|\\bALSA\\b|FLIXBUS|BLABLACAR|PARADOR|\\bAVE\\b|OUIGO|IRYO",
+    category: "Viajes",
+    priority: 33,
   },
 
   // Mascotas
@@ -137,8 +164,11 @@ export const RULES: RuleSeed[] = [
     priority: 35,
   },
 
+  // Alquiler / vivienda
+  { pattern: "ALQUILER|ARRENDAMIENTO|RENTA MENSUAL", category: "Alquiler", subtype: "recibo", priority: 18 },
+
   // Hogar / bricolaje
-  { pattern: "IKEA|LEROY MERLIN|MEDIA MARKT|RECAMBIOS|MOTOS ESTEVARANZ|VINOTINTO MOTORS", category: "Hogar", priority: 38 },
+  { pattern: "IKEA|LEROY MERLIN|MEDIA MARKT|BRICO|FERRETERIA|MENAJE", category: "Hogar", priority: 38 },
 
   // Compras y tecnología / online
   {
@@ -161,5 +191,7 @@ export const RULES: RuleSeed[] = [
   { pattern: "LIQUIDACION CUENTA", category: "Intereses", subtype: "interes", priority: 12 },
   { pattern: "BONIFICACION SOBRE EL IMPORTE", category: "Devoluciones y Abonos", subtype: "abono", priority: 12 },
   { pattern: "ABONO EN LA TARJETA|REGULARIZACION|DEVOLUCION IMPORTE|UBER B\\.V\\.", category: "Devoluciones y Abonos", subtype: "abono", priority: 50 },
-  { pattern: "INGRESO DE EFECTIVO", category: "Otros ingresos", subtype: "abono", priority: 50 },
+  // Ingreso de efectivo = dinero propio que se mete en la cuenta; se trata como
+  // movimiento interno (no es un ingreso real, no computa en la tasa de ahorro).
+  { pattern: "INGRESO DE EFECTIVO", category: "Traspaso interno", priority: 8 },
 ];

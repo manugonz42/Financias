@@ -9,6 +9,7 @@ import {
   checkBalanceConsistency,
   type PdfPage,
 } from "../src/import/openbankParser";
+import { parseUnicajaStatement, isUnicajaStatement } from "../src/import/unicajaParser";
 import { categorize, compileRules } from "../src/import/categorize";
 
 const require = createRequire(import.meta.url);
@@ -18,6 +19,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(
 
 const NOMINA = resolve(__dirname, "../Movimientos de Cuenta.pdf");
 const AHORRO = resolve(__dirname, "../Movimientos de Cuenta De ahorro.pdf");
+const UNICAJA = resolve(__dirname, "../Movimientos Unicaja.pdf");
 
 async function extract(path: string): Promise<PdfPage[]> {
   const data = new Uint8Array(readFileSync(path));
@@ -90,5 +92,46 @@ maybe("Parser de extractos Openbank (PDFs reales)", () => {
       expect(r.category, `concepto: ${concepto}`).toBe(expectedCat);
       expect(r.isInternal, `interno: ${concepto}`).toBe(expectedInternal);
     }
+  });
+
+  it("detecta como interno un movimiento con solo el nombre del titular (sin 'TRANSFERENCIA')", () => {
+    const rules = compileRules();
+    const r = categorize(
+      { fechaOperacion: "2026-06-01", fechaValor: "2026-06-01", concepto: "PEREZ GARCIA JUAN", importe: 700, saldo: 0 },
+      rules,
+      "PEREZ GARCIA JUAN",
+    );
+    expect(r.isInternal).toBe(true);
+    // Un tercero con nombre distinto NO es interno.
+    const other = categorize(
+      { fechaOperacion: "2026-06-01", fechaValor: "2026-06-01", concepto: "MARIA LOPEZ SANZ", importe: 350, saldo: 0 },
+      rules,
+      "PEREZ GARCIA JUAN",
+    );
+    expect(other.isInternal).toBe(false);
+  });
+});
+
+const hasUnicaja = existsSync(UNICAJA);
+(hasUnicaja ? describe : describe.skip)("Parser de extractos Unicaja (PDF real)", () => {
+  it("detecta el formato, parsea movimientos y el saldo encadena", async () => {
+    const pages = await extract(UNICAJA);
+    const fullText = pages.map((p) => p.map((t) => t.str).join(" ")).join(" ");
+    expect(isUnicajaStatement(fullText)).toBe(true);
+
+    const { account, transactions, warnings } = parseUnicajaStatement(pages);
+    console.log(
+      `UNICAJA -> ${transactions.length} movimientos, IBAN termina en ${account.last4}, warnings=${warnings.length}`,
+    );
+    expect(account.number.startsWith("ES")).toBe(true);
+    expect(transactions.length).toBeGreaterThan(50);
+    // El concepto no debe arrastrar las columnas NºMov + Oficina (dos grupos de
+    // 4 dígitos seguidos al final). Un solo grupo de 4 (p. ej. últimos 4 de
+    // tarjeta) es legítimo.
+    const arrastra = transactions.filter((t) => /\d{4}\s+\d{4}\s*$/.test(t.concepto)).length;
+    expect(arrastra).toBe(0);
+    const mismatches = checkBalanceConsistency(transactions);
+    console.log(`UNICAJA -> discrepancias de saldo: ${mismatches}`);
+    expect(mismatches).toBeLessThanOrEqual(3);
   });
 });

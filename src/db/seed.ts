@@ -12,21 +12,23 @@ export async function seed(db: Database): Promise<void> {
     );
   }
 
-  // Reglas: solo si la tabla está vacía (para no pisar ediciones del usuario).
-  const ruleCount = (await db.select(
-    "SELECT COUNT(*) AS n FROM category_rules",
-  )) as Array<{ n: number }>;
-  if ((ruleCount[0]?.n ?? 0) === 0) {
-    for (const r of RULES) {
-      const cat = (await db.select("SELECT id FROM categories WHERE name = ?", [
-        r.category,
-      ])) as Array<{ id: number }>;
-      if (cat[0]) {
-        await db.execute(
-          "INSERT INTO category_rules (pattern, category_id, subtype, priority) VALUES (?, ?, ?, ?)",
-          [r.pattern, cat[0].id, r.subtype ?? null, r.priority],
-        );
-      }
+  // Reglas: añade cada regla semilla que aún no exista (por patrón). Así las
+  // reglas nuevas de versiones posteriores se incorporan a BD ya creadas, sin
+  // duplicar ni pisar las que el usuario haya editado o añadido.
+  for (const r of RULES) {
+    const exists = (await db.select(
+      "SELECT 1 AS x FROM category_rules WHERE pattern = ? LIMIT 1",
+      [r.pattern],
+    )) as Array<{ x: number }>;
+    if (exists.length) continue;
+    const cat = (await db.select("SELECT id FROM categories WHERE name = ?", [
+      r.category,
+    ])) as Array<{ id: number }>;
+    if (cat[0]) {
+      await db.execute(
+        "INSERT INTO category_rules (pattern, category_id, subtype, priority) VALUES (?, ?, ?, ?)",
+        [r.pattern, cat[0].id, r.subtype ?? null, r.priority],
+      );
     }
   }
 

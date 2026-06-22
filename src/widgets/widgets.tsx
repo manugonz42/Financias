@@ -1,7 +1,7 @@
 import { useEffect, useState, type FC } from "react";
 import { EChart } from "../components/charts/EChart";
 import { donutOption, barFlowsOption, lineOption, cashBarOption } from "../components/charts/options";
-import { formatEUR, monthLabel } from "../lib/format";
+import { formatEUR, monthKey } from "../lib/format";
 import { kpis, spendByCategory, monthlyFlows, balanceSeries, netWorthSeries, cashByMonth, detectSubscriptions } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
 import type { TxFilters } from "../types";
@@ -10,22 +10,26 @@ import type { CategorySlice, MonthlyFlow, BalancePoint, CashPoint, Subscription,
 export interface WidgetProps {
   accountId: number | "all";
   excludeInternal: boolean;
-  month: string;
+  from: string;
+  to: string;
   version: number;
 }
 
-function monthScope(p: WidgetProps): TxFilters {
-  return { accountId: p.accountId, month: p.month, excludeInternal: p.excludeInternal };
-}
-function rangeScope(p: WidgetProps): TxFilters {
-  return { accountId: p.accountId, excludeInternal: p.excludeInternal };
+/** Filtro acotado al rango de fechas seleccionado en el dashboard. */
+function scope(p: WidgetProps): TxFilters {
+  return {
+    accountId: p.accountId,
+    from: p.from,
+    to: p.to,
+    excludeInternal: p.excludeInternal,
+  };
 }
 
 const KpiBody: FC<WidgetProps> = (p) => {
   const [k, setK] = useState<KpiSummary | null>(null);
   useEffect(() => {
-    void kpis(monthScope(p)).then(setK);
-  }, [p.accountId, p.month, p.excludeInternal, p.version]);
+    void kpis(scope(p)).then(setK);
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   if (!k) return <span className="muted">…</span>;
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -52,17 +56,17 @@ function Kpi({ label, value, cls }: { label: string; value: number; cls: string 
 const CategoryDonutBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<CategorySlice[]>([]);
   useEffect(() => {
-    void spendByCategory(monthScope(p)).then(setData);
-  }, [p.accountId, p.month, p.excludeInternal, p.version]);
-  if (data.length === 0) return <span className="muted">Sin gastos en {monthLabel(p.month)}.</span>;
+    void spendByCategory(scope(p)).then(setData);
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  if (data.length === 0) return <span className="muted">Sin gastos en el periodo seleccionado.</span>;
   return <EChart option={donutOption(data)} />;
 };
 
 const MonthlyBarsBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<MonthlyFlow[]>([]);
   useEffect(() => {
-    void monthlyFlows(rangeScope(p)).then(setData);
-  }, [p.accountId, p.excludeInternal, p.version]);
+    void monthlyFlows(scope(p)).then(setData);
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
   return <EChart option={barFlowsOption(data)} />;
 };
@@ -81,8 +85,8 @@ const BalanceLineBody: FC<WidgetProps> = (p) => {
 const CashBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<CashPoint[]>([]);
   useEffect(() => {
-    void cashByMonth(rangeScope(p)).then(setData);
-  }, [p.accountId, p.excludeInternal, p.version]);
+    void cashByMonth(scope(p)).then(setData);
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   if (data.length === 0) return <span className="muted">Sin disposiciones de efectivo.</span>;
   const total = data.reduce((s, r) => s + r.total, 0);
   return (
@@ -95,9 +99,11 @@ const CashBody: FC<WidgetProps> = (p) => {
 
 const BudgetsBody: FC<WidgetProps> = (p) => {
   const [rows, setRows] = useState<BudgetRow[]>([]);
+  // Los presupuestos son mensuales: se muestran los del mes de la fecha «hasta».
+  const month = monthKey(p.to || "");
   useEffect(() => {
-    void listBudgets(p.month).then(setRows);
-  }, [p.month, p.version]);
+    if (month) void listBudgets(month).then(setRows);
+  }, [month, p.version]);
   if (rows.length === 0)
     return <span className="muted">Define presupuestos en la pestaña «Presupuestos».</span>;
   return (
@@ -155,8 +161,8 @@ export interface WidgetDef {
 }
 
 export const WIDGETS: WidgetDef[] = [
-  { key: "kpis", title: "Resumen del mes", w: 4, h: 4, Body: KpiBody },
-  { key: "donut", title: "Gasto por categoría (mes)", w: 4, h: 9, Body: CategoryDonutBody },
+  { key: "kpis", title: "Resumen del periodo", w: 4, h: 4, Body: KpiBody },
+  { key: "donut", title: "Gasto por categoría", w: 4, h: 9, Body: CategoryDonutBody },
   { key: "bars", title: "Gastos vs ingresos por mes", w: 8, h: 8, Body: MonthlyBarsBody },
   { key: "balance", title: "Evolución de saldo / patrimonio", w: 8, h: 8, Body: BalanceLineBody },
   { key: "budgets", title: "Presupuestos del mes", w: 4, h: 8, Body: BudgetsBody },

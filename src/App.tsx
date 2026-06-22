@@ -1,6 +1,7 @@
 import { NavLink, Routes, Route } from "react-router-dom";
 import { Dashboard } from "./views/Dashboard";
 import { Movimientos } from "./views/Movimientos";
+import { Categorizar } from "./views/Categorizar";
 import { Importar } from "./views/Importar";
 import { Presupuestos } from "./views/Presupuestos";
 import { Inversiones } from "./views/Inversiones";
@@ -9,6 +10,7 @@ import { Ajustes } from "./views/Ajustes";
 const NAV = [
   { to: "/", label: "Dashboard", icon: "📊", end: true },
   { to: "/movimientos", label: "Movimientos", icon: "📋" },
+  { to: "/categorizar", label: "Categorizar", icon: "🏷️" },
   { to: "/presupuestos", label: "Presupuestos", icon: "🎯" },
   { to: "/inversiones", label: "Inversiones", icon: "📈" },
   { to: "/importar", label: "Importar", icon: "📥" },
@@ -38,6 +40,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/movimientos" element={<Movimientos />} />
+          <Route path="/categorizar" element={<Categorizar />} />
           <Route path="/presupuestos" element={<Presupuestos />} />
           <Route path="/inversiones" element={<Inversiones />} />
           <Route path="/importar" element={<Importar />} />
