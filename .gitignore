@@ -1,0 +1,35 @@
+# === DATOS PERSONALES / PRIVADOS — NUNCA SUBIR (repo público) ===
+# Extractos bancarios y cualquier PDF/CSV de movimientos
+*.pdf
+*.csv
+# Bases de datos locales con tus finanzas
+*.sqlite
+*.sqlite3
+*.db
+data/
+# Ficheros de configuración con identificadores (nombre, IBAN, etc.)
+*.local.json
+config.local.*
+
+# === Node / Frontend ===
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+.env
+.env.*
+
+# === Rust / Tauri ===
+src-tauri/target/
+target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# === Sistema / editores ===
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log

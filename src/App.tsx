@@ -1,0 +1,49 @@
+import { NavLink, Routes, Route } from "react-router-dom";
+import { Dashboard } from "./views/Dashboard";
+import { Movimientos } from "./views/Movimientos";
+import { Importar } from "./views/Importar";
+import { Presupuestos } from "./views/Presupuestos";
+import { Inversiones } from "./views/Inversiones";
+import { Ajustes } from "./views/Ajustes";
+
+const NAV = [
+  { to: "/", label: "Dashboard", icon: "📊", end: true },
+  { to: "/movimientos", label: "Movimientos", icon: "📋" },
+  { to: "/presupuestos", label: "Presupuestos", icon: "🎯" },
+  { to: "/inversiones", label: "Inversiones", icon: "📈" },
+  { to: "/importar", label: "Importar", icon: "📥" },
+  { to: "/ajustes", label: "Ajustes", icon: "⚙️" },
+];
+
+export default function App() {
+  return (
+    <div className="app">
+      <aside className="sidebar">
+        <div className="brand">💰 Financias</div>
+        <nav>
+          {NAV.map((n) => (
+            <NavLink
+              key={n.to}
+              to={n.to}
+              end={n.end}
+              className={({ isActive }) => (isActive ? "navlink active" : "navlink")}
+            >
+              <span>{n.icon}</span>
+              <span>{n.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </aside>
+      <main className="main">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/movimientos" element={<Movimientos />} />
+          <Route path="/presupuestos" element={<Presupuestos />} />
+          <Route path="/inversiones" element={<Inversiones />} />
+          <Route path="/importar" element={<Importar />} />
+          <Route path="/ajustes" element={<Ajustes />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
