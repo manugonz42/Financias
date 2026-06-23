@@ -83,9 +83,12 @@ y desbloquean el patrimonio neto, el mayor diferenciador.
    Ya se refleja en el widget "Evolución de saldo / patrimonio".
 3. ✅ **Tipos de cuenta activo/pasivo** — `accounts.manual` + `accounts.class`; tarjetas,
    préstamos e hipotecas como pasivos que restan en el patrimonio neto.
-4. ⏳ **Split de transacciones** — dividir un movimiento en varias categorías
-   (ej. ticket de súper = comida + droguería + ocio).
-5. ⏳ **Metas de ahorro (goals)** — fijar objetivo (p. ej. "3.000 € vacaciones") y ver progreso.
+4. ✅ **Split de transacciones** — dividir un movimiento en varias categorías
+   (ej. ticket de súper = comida + droguería + ocio). Tabla `transaction_splits` +
+   subconsulta de "filas efectivas" que solo afecta a las agregaciones por categoría
+   (donut y presupuestos); KPIs/saldo/flujos no cambian. Editor ✂ en Movimientos.
+5. ✅ **Metas de ahorro (goals)** — objetivo + ahorrado + fecha; barra de progreso, ritmo
+   mensual necesario y aportaciones manuales. Pestaña «Metas» + widget en el dashboard.
 6. ⏳ **Reconciliación** — cuadrar contra el saldo del extracto y marcar movimientos conciliados.
 7. ⏳ **Transacciones programadas / próximos pagos** — calendario de pagos futuros y recurrentes
    previstos (proyectar a futuro las suscripciones que ya se detectan).
@@ -113,6 +116,11 @@ y desbloquean el patrimonio neto, el mayor diferenciador.
 - 💡 Reglas de categorización editables desde la propia app (UI).
 - 💡 Copia de seguridad / exportar-importar la base de datos.
 - 💡 Multi-divisa (Firefly la tiene; útil si se amplía el alcance).
+- 💡 **Donut "lupa" (fisheye) en el hover** — aumentar las porciones pequeñas al acercar el
+  ratón para poder apuntarlas. *Intentado y revertido (jun 2026): con `setOption` imperativo +
+  `universalTransition` las porciones se ponían en negro y se mezclaban al salir/entrar el ratón.
+  Reintentar con otra técnica (p. ej. `minAngle` para un suelo angular, o `graphic`/custom series
+  en vez de recalcular valores en cada `mousemove`).*
 
 ---
 
