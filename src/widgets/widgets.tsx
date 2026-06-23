@@ -186,15 +186,15 @@ const BudgetsBody: FC<WidgetProps> = (p) => {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
       {rows.map((b) => {
-        const pct = b.amount > 0 ? Math.min((b.spent / b.amount) * 100, 100) : 0;
-        const over = b.spent > b.amount;
+        const pct = b.available > 0 ? Math.min((b.spent / b.available) * 100, 100) : 0;
+        const over = b.spent > b.available;
         return (
           <div key={b.category_id}>
             <div className="row" style={{ fontSize: 13 }}>
               <span>{b.icon} {b.category_name}</span>
               <span className="spacer" />
               <span className={over ? "amount neg" : "muted"}>
-                {formatEUR(b.spent)} / {formatEUR(b.amount)}
+                {formatEUR(b.spent)} / {formatEUR(b.available)}
               </span>
             </div>
             <div className="bar">

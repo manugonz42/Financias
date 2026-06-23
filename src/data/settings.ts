@@ -25,3 +25,11 @@ export async function setExcludeInternal(v: boolean): Promise<void> {
 export async function getOwnerName(): Promise<string> {
   return (await getSetting("owner_name")) ?? "";
 }
+
+export async function getBudgetRollover(): Promise<boolean> {
+  return (await getSetting("budget_rollover")) === "1";
+}
+
+export async function setBudgetRollover(v: boolean): Promise<void> {
+  await setSetting("budget_rollover", v ? "1" : "0");
+}

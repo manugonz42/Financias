@@ -1,4 +1,5 @@
 import { query, exec } from "../db/database";
+import { FALLBACK_EXPENSE, FALLBACK_INCOME, INTERNAL_CATEGORY } from "../rules/categoryRules";
 import type { Category, CategoryNode } from "../types";
 
 export async function listCategories(): Promise<Category[]> {
@@ -146,21 +147,39 @@ export async function moveCategory(
  * sin categoría si era raíz). Sus reglas y presupuesto se reapuntan al padre o
  * se eliminan si no hay padre.
  */
+/**
+ * Borra una categoría. Sus subcategorías suben al padre (o pasan a raíz). Sus
+ * movimientos, splits y reglas se reasignan al **padre** si lo tiene; si era una
+ * categoría raíz, van al **fallback de su tipo** (Otros gastos / Otros ingresos /
+ * Traspaso interno), de modo que nada queda sin categoría.
+ */
 export async function deleteCategory(id: number): Promise<void> {
-  const cat = (await query<{ parent_id: number | null }>(
-    "SELECT parent_id FROM categories WHERE id = ?",
+  const cat = (await query<{ parent_id: number | null; kind: Category["kind"] }>(
+    "SELECT parent_id, kind FROM categories WHERE id = ?",
     [id],
   ))[0];
   if (!cat) return;
   const parentId = cat.parent_id;
 
+  // Destino de movimientos/splits/reglas: el padre, o el fallback del tipo si es raíz.
+  let target = parentId;
+  if (target == null) {
+    const fallbackName =
+      cat.kind === "ingreso" ? FALLBACK_INCOME : cat.kind === "interno" ? INTERNAL_CATEGORY : FALLBACK_EXPENSE;
+    const fb = (await query<{ id: number }>("SELECT id FROM categories WHERE name = ?", [fallbackName]))[0];
+    target = fb && fb.id !== id ? fb.id : null;
+  }
+
   await exec("UPDATE categories SET parent_id = ? WHERE parent_id = ?", [parentId, id]);
-  await exec("UPDATE transactions SET category_id = ? WHERE category_id = ?", [parentId, id]);
-  if (parentId != null) {
-    await exec("UPDATE category_rules SET category_id = ? WHERE category_id = ?", [parentId, id]);
+  await exec("UPDATE transactions SET category_id = ? WHERE category_id = ?", [target, id]);
+  if (target != null) {
+    await exec("UPDATE transaction_splits SET category_id = ? WHERE category_id = ?", [target, id]);
+    await exec("UPDATE category_rules SET category_id = ? WHERE category_id = ?", [target, id]);
   } else {
+    await exec("DELETE FROM transaction_splits WHERE category_id = ?", [id]);
     await exec("DELETE FROM category_rules WHERE category_id = ?", [id]);
   }
+  await exec("UPDATE scheduled_payments SET category_id = NULL WHERE category_id = ?", [id]);
   await exec("DELETE FROM budgets WHERE category_id = ?", [id]);
   await exec("DELETE FROM categories WHERE id = ?", [id]);
 }

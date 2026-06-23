@@ -16,10 +16,25 @@ export function getDB(): Promise<Database> {
       }
       await migrate(db);
       await seed(db);
+      await normalizeOrphans(db);
       return db;
     })();
   }
   return dbPromise;
+}
+
+/**
+ * Saneamiento: movimientos que quedaron sin categoría (huérfanos por borrados de
+ * categoría con versiones antiguas) se reasignan al fallback de su tipo, para que
+ * vuelvan a contar en los análisis. Se ejecuta tras el seed (categorías ya creadas).
+ */
+async function normalizeOrphans(db: Database): Promise<void> {
+  await db.execute(
+    "UPDATE transactions SET category_id = (SELECT id FROM categories WHERE name = 'Otros gastos') WHERE category_id IS NULL AND importe < 0",
+  );
+  await db.execute(
+    "UPDATE transactions SET category_id = (SELECT id FROM categories WHERE name = 'Otros ingresos') WHERE category_id IS NULL AND importe >= 0",
+  );
 }
 
 /**

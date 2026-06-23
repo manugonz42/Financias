@@ -145,6 +145,9 @@ export function Dashboard() {
               })}
             </select>
           )}
+          <button onClick={() => reload()} title="Recalcular los widgets con los datos actuales">
+            ↻ Refrescar
+          </button>
           <button onClick={() => void resetDash()} title="Volver a la disposición por defecto">
             Restablecer disposición
           </button>
