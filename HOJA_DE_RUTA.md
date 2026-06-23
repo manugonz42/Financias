@@ -96,9 +96,13 @@ y desbloquean el patrimonio neto, el mayor diferenciador.
    «Programados» (alta/edición, «Pagado» avanza la fecha según frecuencia) y widget
    «Próximos pagos» con días restantes. *Pendiente:* proyectar las suscripciones autodetectadas.
 8. ✅ **Adjuntar recibos + desglose por líneas** — `transactions.receipt_path` + tabla
-   `receipt_items`. Modal 📎 en Movimientos: adjuntar archivo (ruta, vía diálogo) con vista
-   previa de imagen (lee bytes con el comando Rust existente, sin tocar permisos) y desglose
-   por producto/importe/categoría. Widget «En qué se gasta» (top productos). *OCR: fase 2.*
+   `receipt_items`. Modal 📎 en Movimientos: adjuntar archivo con vista previa de imagen y
+   desglose por producto/importe/categoría. Widget «En qué se gasta» (top productos).
+   - ✅ **OCR nativo de Windows** (`Windows.Media.Ocr` vía Rust) + parser `receiptParse`
+     (producto/importe/fecha/total por posición). *Pendiente: OCR de macOS (Apple Vision).*
+   - ✅ **Aprendizaje por producto** (`item_rules`): cada producto categorizado se recuerda.
+   - ✅ **Import masivo de tickets** (pestaña Importar): empareja al movimiento por total/fecha/
+     palabras clave, confirma o elige a mano, y cola «en espera» (`pending_receipts`).
 9. ✅ **Rollover de presupuesto** (estilo envelope) — toggle en Presupuestos: disponible =
    límite + acumulado (límite·meses desde el primer movimiento − gastado previo). Se refleja
    en la vista y en el widget.
@@ -107,15 +111,15 @@ y desbloquean el patrimonio neto, el mayor diferenciador.
 fallback de su tipo —Otros gastos/ingresos/Traspaso interno— si es raíz), nunca quedan sin
 categoría. Botón «↻ Refrescar» en el dashboard.
 
-## Fase 7 — UI / UX ⏳
+## Fase 7 — UI / UX 🔄
 
-- ⏳ **Sistema de diseño coherente + modo oscuro** — tokens de color/espaciado y tipografía
-  consistentes.
-- ⏳ **Estados vacíos con acción** — en vez de tablas/gráficos vacíos, un CTA
-  ("Importa tu primer extracto").
-- ⏳ **Drill-down de categoría** — clic en una porción del donut → desglose de esa categoría.
-- ⏳ **Densidad y jerarquía en la tabla de movimientos** — iconos de categoría, color por signo,
-  agrupar por fecha.
+- ✅ **Modo claro/oscuro** — interruptor en la barra lateral; los gráficos leen las variables CSS
+  del tema. (Sistema de diseño coherente: refinamiento continuo.)
+- 🔄 **Estados vacíos con acción** — hecho en Movimientos; pendiente en Categorizar, Metas,
+  Programados, Presupuestos, Inversiones.
+- ✅ **Drill-down de categoría** — clic en una porción del donut → desglose de sus subcategorías.
+- ✅ **Densidad y jerarquía en la tabla de movimientos** — badge de categoría con color, color por
+  signo, agrupación por fecha (con toggle) y orden por fecha/importe.
 
 > Descartados de momento (2026-06-23): onboarding guiado y paleta de comandos (Cmd/Ctrl+K).
 
