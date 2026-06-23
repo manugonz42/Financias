@@ -1,6 +1,6 @@
 import { query } from "../db/database";
 import { buildWhere } from "./filters";
-import { listAccounts } from "./accounts";
+import { listAccounts, currentBalance } from "./accounts";
 import type { TxFilters } from "../types";
 
 export interface CategorySlice {
@@ -144,6 +144,25 @@ export async function netWorthSeries(): Promise<BalancePoint[]> {
     result.push({ month: m, saldo: +total.toFixed(2) });
   }
   return result;
+}
+
+export interface NetWorthNow {
+  assets: number;
+  liabilities: number;
+  net: number;
+}
+
+/** Patrimonio neto actual: activos, pasivos (magnitud) y neto = activos − pasivos. */
+export async function netWorthNow(): Promise<NetWorthNow> {
+  const accounts = await listAccounts();
+  let assets = 0;
+  let liabilities = 0;
+  for (const a of accounts) {
+    const bal = await currentBalance(a.id);
+    if (a.class === "pasivo") liabilities += bal;
+    else assets += bal;
+  }
+  return { assets, liabilities, net: +(assets - liabilities).toFixed(2) };
 }
 
 export interface CashPoint {

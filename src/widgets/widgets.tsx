@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState, type FC } from "react";
 import { EChart } from "../components/charts/EChart";
 import { donutOption, barFlowsOption, lineOption, cashBarOption } from "../components/charts/options";
 import { formatEUR, monthKey } from "../lib/format";
-import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, cashByMonth, detectSubscriptions } from "../data/stats";
+import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
 import { donutSlices } from "../lib/donut";
 import { useApp } from "../state/AppContext";
 import type { TxFilters } from "../types";
-import type { MonthlyFlow, BalancePoint, CashPoint, Subscription, KpiSummary } from "../data/stats";
+import type { MonthlyFlow, BalancePoint, CashPoint, Subscription, KpiSummary, NetWorthNow } from "../data/stats";
 
 export interface WidgetProps {
   accountId: number | "all";
@@ -117,6 +117,24 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
   );
 };
 
+const NetWorthBody: FC<WidgetProps> = (p) => {
+  const [nw, setNw] = useState<NetWorthNow | null>(null);
+  useEffect(() => {
+    void netWorthNow().then(setNw);
+  }, [p.version]);
+  if (!nw) return <span className="muted">…</span>;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <Kpi label="Activos" value={nw.assets} cls="good" />
+      <Kpi label="Pasivos" value={nw.liabilities} cls="bad" />
+      <div className="kpi" style={{ gridColumn: "1 / -1", padding: 0, border: "none", background: "transparent" }}>
+        <div className="label">Patrimonio neto</div>
+        <div className={`value ${nw.net >= 0 ? "good" : "bad"}`}>{formatEUR(nw.net)}</div>
+      </div>
+    </div>
+  );
+};
+
 const MonthlyBarsBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<MonthlyFlow[]>([]);
   useEffect(() => {
@@ -217,6 +235,7 @@ export interface WidgetDef {
 
 export const WIDGETS: WidgetDef[] = [
   { key: "kpis", title: "Resumen del periodo", w: 4, h: 4, Body: KpiBody },
+  { key: "networth", title: "Patrimonio neto", w: 4, h: 4, Body: NetWorthBody },
   { key: "donut", title: "Gasto por categoría", w: 4, h: 9, Body: CategoryDonutBody },
   { key: "bars", title: "Gastos vs ingresos por mes", w: 8, h: 8, Body: MonthlyBarsBody },
   { key: "balance", title: "Evolución de saldo / patrimonio", w: 8, h: 8, Body: BalanceLineBody },
