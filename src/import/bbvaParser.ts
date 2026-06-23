@@ -22,13 +22,16 @@ import type {
 import { toISODate } from "./openbankParser";
 
 const DATE_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-// Importe BBVA: formato español, símbolo € opcional pegado o separado.
-// Ejemplos: "-9,99 €", "1463,27 €", "1.234,56", "-1.000,99 €".
-const AMOUNT_RE = /^-?\d{1,3}(?:\.\d{3})*,\d{2}(?:\s?€)?$/;
+// Importe BBVA: formato español con o sin separador de miles. BBVA NO usa
+// separador para cantidades pequeñas: "1463,27 €" en vez de "1.463,27 €".
+// Símbolo € opcional. Ejemplos: "-9,99 €", "1463,27 €", "1.234,56", "-1000,99 €".
+const AMOUNT_RE = /^-?\d+(?:\.\d{3})*,\d{2}(?:\s?€)?$/;
 
 // Cabeceras, pie de página y texto repetido que descartamos del concepto.
+// pdf.js tokeniza muchas frases palabra a palabra; por eso aparecen sueltas
+// "Latest", "movements", "Value", "date"… y hay que filtrarlas individualmente.
 const NOISE_RE =
-  /^(BBVA|Date|Reason|Amount|Balance|Latest movements|Últimos movimientos|\d+\/\d+|BANCO BILBAO VIZCAYA|.*Plaza de San Nicolás.*|.*CIF A-?\d+.*|.*Registro Mercantil.*)$/i;
+  /^(BBVA|Date|Reason|Amount|Balance|Latest|movements|Últimos|Value|date|valor|\d+\/\d+|BANCO BILBAO VIZCAYA|.*Plaza de San Nicolás.*|.*CIF A-?\d+.*|.*Registro Mercantil.*)$/i;
 
 const isDate = (s: string): boolean => DATE_RE.test(s.trim());
 const isAmount = (s: string): boolean => AMOUNT_RE.test(s.trim());
@@ -145,7 +148,6 @@ function buildTransaction(rec: Record, warnings: string[]): ParsedTransaction | 
   if (sortedDates[1]) excluded.add(sortedDates[1]);
   const conceptoTokens = rec.tokens
     .filter((t) => !excluded.has(t))
-    .filter((t) => !/^Value\s*date$/i.test(t.str.trim()))
     .sort((a, b) => b.y - a.y || a.x - b.x);
   const concepto = conceptoTokens
     .map((t) => t.str)
