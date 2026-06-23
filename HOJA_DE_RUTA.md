@@ -95,7 +95,10 @@ y desbloquean el patrimonio neto, el mayor diferenciador.
 7. ✅ **Transacciones programadas / próximos pagos** — tabla `scheduled_payments`, pestaña
    «Programados» (alta/edición, «Pagado» avanza la fecha según frecuencia) y widget
    «Próximos pagos» con días restantes. *Pendiente:* proyectar las suscripciones autodetectadas.
-8. ⏳ **Adjuntar recibos** a un movimiento.
+8. ✅ **Adjuntar recibos + desglose por líneas** — `transactions.receipt_path` + tabla
+   `receipt_items`. Modal 📎 en Movimientos: adjuntar archivo (ruta, vía diálogo) con vista
+   previa de imagen (lee bytes con el comando Rust existente, sin tocar permisos) y desglose
+   por producto/importe/categoría. Widget «En qué se gasta» (top productos). *OCR: fase 2.*
 9. ✅ **Rollover de presupuesto** (estilo envelope) — toggle en Presupuestos: disponible =
    límite + acumulado (límite·meses desde el primer movimiento − gastado previo). Se refleja
    en la vista y en el widget.
