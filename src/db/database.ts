@@ -4,6 +4,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import { SCHEMA } from "./schema";
 import { seed } from "./seed";
+import { CATEGORIES } from "../rules/categoryRules";
 
 let dbPromise: Promise<Database> | null = null;
 
@@ -51,6 +52,21 @@ async function migrate(db: Database): Promise<void> {
       "ALTER TABLE categories ADD COLUMN parent_id INTEGER REFERENCES categories(id)",
     );
   }
+  // seed_key en categories: ancla a la semilla original para que renombres y
+  // borrados de categorías sembradas persistan entre arranques.
+  if (!catCols.some((c) => c.name === "seed_key")) {
+    await db.execute("ALTER TABLE categories ADD COLUMN seed_key TEXT");
+    // Backfill: las filas con nombre = nombre de semilla son las sembradas.
+    for (const c of CATEGORIES) {
+      await db.execute(
+        "UPDATE categories SET seed_key = ? WHERE name = ? AND seed_key IS NULL",
+        [c.name, c.name],
+      );
+    }
+  }
+  await db.execute(
+    "CREATE TABLE IF NOT EXISTS deleted_seed_categories (key TEXT PRIMARY KEY)",
+  );
 
   // manual / class en accounts: cuentas manuales y patrimonio neto.
   const accCols = (await db.select(
