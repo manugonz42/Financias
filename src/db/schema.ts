@@ -91,6 +91,17 @@ export const SCHEMA: string[] = [
      value TEXT
    )`,
 
+  // Pagos programados / recurrentes previstos (calendario de próximos pagos).
+  `CREATE TABLE IF NOT EXISTS scheduled_payments (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL,
+     amount REAL NOT NULL,               -- magnitud (positiva)
+     category_id INTEGER REFERENCES categories(id),
+     frequency TEXT NOT NULL,            -- 'mensual' | 'semanal' | 'anual'
+     next_date TEXT NOT NULL,            -- 'YYYY-MM-DD'
+     active INTEGER NOT NULL DEFAULT 1
+   )`,
+
   // Metas de ahorro: objetivo y progreso (aportaciones manuales).
   `CREATE TABLE IF NOT EXISTS goals (
      id INTEGER PRIMARY KEY AUTOINCREMENT,

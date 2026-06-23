@@ -90,6 +90,19 @@ export interface TransactionSplit {
   note: string | null;
 }
 
+export type Frequency = "mensual" | "semanal" | "anual";
+
+/** Pago programado / recurrente previsto. */
+export interface ScheduledPayment {
+  id: number;
+  name: string;
+  amount: number;
+  category_id: number | null;
+  frequency: Frequency;
+  next_date: string;
+  active: number;
+}
+
 /** Meta de ahorro. */
 export interface Goal {
   id: number;

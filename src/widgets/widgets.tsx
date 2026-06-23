@@ -6,6 +6,8 @@ import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSe
 import { listBudgets, type BudgetRow } from "../data/budgets";
 import { listGoals } from "../data/goals";
 import { goalPercent } from "../lib/goals";
+import { listScheduled, type ScheduledRow } from "../data/scheduled";
+import { daysUntil } from "../lib/schedule";
 import { donutSlices } from "../lib/donut";
 import { useApp } from "../state/AppContext";
 import type { Goal, TxFilters } from "../types";
@@ -256,6 +258,35 @@ const GoalsBody: FC<WidgetProps> = (p) => {
   );
 };
 
+const UpcomingBody: FC<WidgetProps> = (p) => {
+  const [rows, setRows] = useState<ScheduledRow[]>([]);
+  useEffect(() => {
+    void listScheduled().then(setRows);
+  }, [p.version]);
+  if (rows.length === 0)
+    return <span className="muted">Programa pagos en la pestaña «Programados».</span>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, overflowY: "auto" }}>
+      {rows.slice(0, 12).map((s) => {
+        const d = daysUntil(s.next_date);
+        const overdue = d < 0;
+        return (
+          <div className="row" key={s.id} style={{ fontSize: 13 }}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 150 }}>
+              {s.category_icon ?? "📅"} {s.name}
+            </span>
+            <span className="spacer" />
+            <span className={overdue ? "amount neg" : "muted"} style={{ fontSize: 12 }}>
+              {overdue ? `−${-d}d` : `${d}d`}
+            </span>
+            <span style={{ width: 80, textAlign: "right" }}>{formatEUR(s.amount)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 export interface WidgetDef {
   key: string;
   title: string;
@@ -272,6 +303,7 @@ export const WIDGETS: WidgetDef[] = [
   { key: "balance", title: "Evolución de saldo / patrimonio", w: 8, h: 8, Body: BalanceLineBody },
   { key: "budgets", title: "Presupuestos del mes", w: 4, h: 8, Body: BudgetsBody },
   { key: "goals", title: "Metas de ahorro", w: 4, h: 7, Body: GoalsBody },
+  { key: "upcoming", title: "Próximos pagos", w: 4, h: 7, Body: UpcomingBody },
   { key: "cash", title: "Efectivo en cajero", w: 6, h: 7, Body: CashBody },
   { key: "subs", title: "Pagos recurrentes", w: 6, h: 7, Body: SubscriptionsBody },
 ];
