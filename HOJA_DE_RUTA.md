@@ -89,7 +89,9 @@ y desbloquean el patrimonio neto, el mayor diferenciador.
    (donut y presupuestos); KPIs/saldo/flujos no cambian. Editor ✂ en Movimientos.
 5. ✅ **Metas de ahorro (goals)** — objetivo + ahorrado + fecha; barra de progreso, ritmo
    mensual necesario y aportaciones manuales. Pestaña «Metas» + widget en el dashboard.
-6. ⏳ **Reconciliación** — cuadrar contra el saldo del extracto y marcar movimientos conciliados.
+6. ✅ **Reconciliación (marcar como revisado)** — flag `reconciled` por movimiento, checkbox y
+   filtro (conciliados/pendientes) en Movimientos, recuento y conciliar/desmarcar en bloque.
+   (El cuadre de saldo ya lo garantiza el parser al importar.)
 7. ⏳ **Transacciones programadas / próximos pagos** — calendario de pagos futuros y recurrentes
    previstos (proyectar a futuro las suscripciones que ya se detectan).
 8. ⏳ **Adjuntar recibos** a un movimiento.
