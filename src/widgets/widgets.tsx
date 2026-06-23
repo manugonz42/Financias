@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FC } from "react";
 import { EChart } from "../components/charts/EChart";
 import { donutOption, barFlowsOption, lineOption, cashBarOption } from "../components/charts/options";
 import { formatEUR, monthKey } from "../lib/format";
-import { kpis, spendByCategoryId, monthlyFlows, balanceSeries, netWorthSeries, cashByMonth, detectSubscriptions } from "../data/stats";
+import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, cashByMonth, detectSubscriptions } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
 import { donutSlices } from "../lib/donut";
 import { useApp } from "../state/AppContext";
@@ -130,7 +130,7 @@ const BalanceLineBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<BalancePoint[]>([]);
   useEffect(() => {
     if (p.accountId === "all") void netWorthSeries().then(setData);
-    else void balanceSeries(p.accountId).then(setData);
+    else void accountBalanceSeries(p.accountId).then(setData);
   }, [p.accountId, p.version]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
   const name = p.accountId === "all" ? "Patrimonio neto" : "Saldo";

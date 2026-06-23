@@ -1,6 +1,21 @@
 // Tipos del dominio compartidos por la UI y la capa de datos.
 
-export type AccountType = "checking" | "savings";
+export type AccountClass = "activo" | "pasivo";
+
+export type AccountType =
+  // Importadas (siempre activo)
+  | "checking"
+  | "savings"
+  // Manuales — activos
+  | "efectivo"
+  | "inversion"
+  | "inmueble"
+  | "otro_activo"
+  // Manuales — pasivos
+  | "tarjeta_credito"
+  | "prestamo"
+  | "hipoteca"
+  | "otro_pasivo";
 
 export interface Account {
   id: number;
@@ -10,6 +25,18 @@ export interface Account {
   last4: string | null;
   holder: string | null;
   currency: string;
+  /** 1 = cuenta manual (creada a mano, sin extracto). */
+  manual: number;
+  /** Clasificación para el patrimonio neto. */
+  class: AccountClass;
+}
+
+/** Apunte de saldo con fecha para cuentas manuales. */
+export interface AccountBalance {
+  id: number;
+  account_id: number;
+  date: string;
+  balance: number;
 }
 
 export interface Category {

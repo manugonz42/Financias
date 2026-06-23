@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { ExcludeInternalToggle } from "../components/Controls";
 import { CategoryManager } from "../components/CategoryManager";
+import { ManualAccounts } from "../components/ManualAccounts";
 import { getOwnerName, setSetting } from "../data/settings";
-import { listAccounts, currentBalance } from "../data/accounts";
+import { listAccounts, currentBalance, accountTypeLabel } from "../data/accounts";
 import { resetData } from "../db/database";
 import { formatEUR } from "../lib/format";
 import type { Account } from "../types";
@@ -17,7 +18,7 @@ export function Ajustes() {
 
   function loadAccounts() {
     void (async () => {
-      const accs = await listAccounts();
+      const accs = (await listAccounts()).filter((a) => !a.manual);
       const withBal = await Promise.all(
         accs.map(async (a) => ({ ...a, balance: await currentBalance(a.id) })),
       );
@@ -50,15 +51,23 @@ export function Ajustes() {
       <div className="topbar"><h1>Ajustes</h1></div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3>Cuentas</h3>
+        <h3>Cuentas importadas</h3>
         {accounts.length === 0 && <span className="muted">Aún no hay cuentas importadas.</span>}
         {accounts.map((a) => (
           <div className="result-line" key={a.id}>
-            <span><b>{a.name}</b> <span className="muted">· ····{a.last4}</span></span>
+            <span>
+              <b>{a.name}</b>{" "}
+              <span className="muted">· {accountTypeLabel(a.type)}{a.last4 ? ` ····${a.last4}` : ""}</span>
+            </span>
             <span className="spacer" />
             <span>{formatEUR(a.balance)}</span>
           </div>
         ))}
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3>Cuentas manuales</h3>
+        <ManualAccounts />
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>

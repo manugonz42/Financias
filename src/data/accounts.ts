@@ -1,8 +1,87 @@
 import { query, exec } from "../db/database";
-import type { Account } from "../types";
+import type { Account, AccountBalance, AccountClass, AccountType } from "../types";
+
+/** Metadatos de los tipos de cuenta manual: etiqueta y clase (activo/pasivo). */
+export const MANUAL_ACCOUNT_TYPES: { type: AccountType; label: string; class: AccountClass }[] = [
+  { type: "efectivo", label: "Efectivo", class: "activo" },
+  { type: "inversion", label: "Inversión / Broker", class: "activo" },
+  { type: "inmueble", label: "Inmueble", class: "activo" },
+  { type: "otro_activo", label: "Otro activo", class: "activo" },
+  { type: "tarjeta_credito", label: "Tarjeta de crédito", class: "pasivo" },
+  { type: "prestamo", label: "Préstamo", class: "pasivo" },
+  { type: "hipoteca", label: "Hipoteca", class: "pasivo" },
+  { type: "otro_pasivo", label: "Otro pasivo", class: "pasivo" },
+];
+
+const TYPE_LABELS: Record<string, string> = {
+  checking: "Cuenta corriente",
+  savings: "Cuenta de ahorro",
+  ...Object.fromEntries(MANUAL_ACCOUNT_TYPES.map((t) => [t.type, t.label])),
+};
+
+export function accountTypeLabel(type: string): string {
+  return TYPE_LABELS[type] ?? type;
+}
+
+export function classOfType(type: AccountType): AccountClass {
+  return MANUAL_ACCOUNT_TYPES.find((t) => t.type === type)?.class ?? "activo";
+}
 
 export async function listAccounts(): Promise<Account[]> {
-  return query<Account>("SELECT * FROM accounts ORDER BY type DESC, id");
+  return query<Account>("SELECT * FROM accounts ORDER BY class, manual, type DESC, id");
+}
+
+// --- Cuentas manuales ---------------------------------------------------------
+
+export async function createManualAccount(a: {
+  name: string;
+  type: AccountType;
+}): Promise<number> {
+  const res = await exec(
+    "INSERT INTO accounts (name, type, manual, class) VALUES (?, ?, 1, ?)",
+    [a.name.trim(), a.type, classOfType(a.type)],
+  );
+  return Number(res.lastInsertId);
+}
+
+export async function updateManualAccount(
+  id: number,
+  a: { name: string; type: AccountType },
+): Promise<void> {
+  await exec(
+    "UPDATE accounts SET name = ?, type = ?, class = ? WHERE id = ? AND manual = 1",
+    [a.name.trim(), a.type, classOfType(a.type), id],
+  );
+}
+
+/** Borra una cuenta manual y sus saldos. No afecta a las cuentas importadas. */
+export async function deleteManualAccount(id: number): Promise<void> {
+  await exec("DELETE FROM account_balances WHERE account_id = ?", [id]);
+  await exec("DELETE FROM accounts WHERE id = ? AND manual = 1", [id]);
+}
+
+// --- Saldos manuales (snapshots) ----------------------------------------------
+
+export async function listBalanceSnapshots(accountId: number): Promise<AccountBalance[]> {
+  return query<AccountBalance>(
+    "SELECT * FROM account_balances WHERE account_id = ? ORDER BY date DESC, id DESC",
+    [accountId],
+  );
+}
+
+export async function addBalanceSnapshot(
+  accountId: number,
+  date: string,
+  balance: number,
+): Promise<void> {
+  await exec(
+    "INSERT INTO account_balances (account_id, date, balance) VALUES (?, ?, ?)",
+    [accountId, date, balance],
+  );
+}
+
+export async function deleteBalanceSnapshot(id: number): Promise<void> {
+  await exec("DELETE FROM account_balances WHERE id = ?", [id]);
 }
 
 /**
@@ -39,8 +118,17 @@ export async function upsertAccount(a: {
   return Number(res.lastInsertId);
 }
 
-/** Saldo actual de una cuenta = saldo del movimiento más reciente. */
+/**
+ * Saldo actual de una cuenta. Para cuentas manuales = último snapshot; para
+ * cuentas importadas = saldo del movimiento más reciente. Es la magnitud sin
+ * signo: el patrimonio neto aplica el signo según la clase (activo/pasivo).
+ */
 export async function currentBalance(accountId: number): Promise<number> {
+  const snap = (await query<{ balance: number }>(
+    "SELECT balance FROM account_balances WHERE account_id = ? ORDER BY date DESC, id DESC LIMIT 1",
+    [accountId],
+  ))[0];
+  if (snap) return snap.balance;
   const row = (await query<{ saldo: number }>(
     `SELECT saldo FROM transactions
      WHERE account_id = ? AND saldo IS NOT NULL

@@ -68,7 +68,7 @@ export interface BalancePoint {
   saldo: number;
 }
 
-/** Saldo de cierre por mes de una cuenta concreta. */
+/** Saldo de cierre por mes de una cuenta importada (a partir de movimientos). */
 export async function balanceSeries(accountId: number): Promise<BalancePoint[]> {
   return query<BalancePoint>(
     `SELECT month, saldo FROM (
@@ -84,9 +84,33 @@ export async function balanceSeries(accountId: number): Promise<BalancePoint[]> 
   );
 }
 
+/** Saldo de cierre por mes de una cuenta manual (a partir de snapshots). */
+export async function snapshotBalanceSeries(accountId: number): Promise<BalancePoint[]> {
+  return query<BalancePoint>(
+    `SELECT month, balance AS saldo FROM (
+        SELECT substr(date, 1, 7) AS month, balance,
+               ROW_NUMBER() OVER (
+                 PARTITION BY substr(date, 1, 7)
+                 ORDER BY date DESC, id DESC
+               ) AS rn
+        FROM account_balances
+        WHERE account_id = ?
+     ) WHERE rn = 1 ORDER BY month`,
+    [accountId],
+  );
+}
+
+/** Serie de saldo de una cuenta, eligiendo la fuente según sea manual o no. */
+export async function accountBalanceSeries(accountId: number): Promise<BalancePoint[]> {
+  const acc = (await listAccounts()).find((a) => a.id === accountId);
+  if (!acc) return [];
+  return acc.manual ? snapshotBalanceSeries(accountId) : balanceSeries(accountId);
+}
+
 /**
- * Patrimonio neto por mes = suma del saldo de cierre de todas las cuentas,
- * arrastrando el último saldo conocido en los meses sin movimientos.
+ * Patrimonio neto por mes = activos − pasivos. Para cada cuenta se toma el saldo
+ * de cierre mensual (movimientos o snapshots), se arrastra el último conocido
+ * (forward-fill) y se resta si la cuenta es un pasivo.
  */
 export async function netWorthSeries(): Promise<BalancePoint[]> {
   const accounts = await listAccounts();
@@ -94,8 +118,8 @@ export async function netWorthSeries(): Promise<BalancePoint[]> {
 
   const perAccount = await Promise.all(
     accounts.map(async (a) => ({
-      id: a.id,
-      points: await balanceSeries(a.id),
+      sign: a.class === "pasivo" ? -1 : 1,
+      points: a.manual ? await snapshotBalanceSeries(a.id) : await balanceSeries(a.id),
     })),
   );
 
@@ -115,7 +139,7 @@ export async function netWorthSeries(): Promise<BalancePoint[]> {
         if (p.month <= m) last = p.saldo;
         else break;
       }
-      total += last;
+      total += a.sign * last;
     }
     result.push({ month: m, saldo: +total.toFixed(2) });
   }

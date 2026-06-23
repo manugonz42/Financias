@@ -5,12 +5,25 @@ export const SCHEMA: string[] = [
   `CREATE TABLE IF NOT EXISTS accounts (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      name TEXT NOT NULL,
-     type TEXT NOT NULL,                 -- 'checking' | 'savings'
+     type TEXT NOT NULL,                 -- importadas: 'checking'|'savings'; manuales: 'efectivo','inversion','inmueble','otro_activo','tarjeta_credito','prestamo','hipoteca','otro_pasivo'
      number TEXT UNIQUE,
      last4 TEXT,
      holder TEXT,
-     currency TEXT NOT NULL DEFAULT 'EUR'
+     currency TEXT NOT NULL DEFAULT 'EUR',
+     manual INTEGER NOT NULL DEFAULT 0,  -- 1 = cuenta creada a mano (sin extracto)
+     class TEXT NOT NULL DEFAULT 'activo' -- 'activo' | 'pasivo' (para el patrimonio neto)
    )`,
+
+  // Saldos manuales con fecha (snapshots): permiten que las cuentas sin
+  // movimientos importados aporten su saldo y su evolución al patrimonio neto.
+  `CREATE TABLE IF NOT EXISTS account_balances (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     account_id INTEGER NOT NULL REFERENCES accounts(id),
+     date TEXT NOT NULL,                 -- ISO 'YYYY-MM-DD'
+     balance REAL NOT NULL               -- magnitud (positiva); el signo lo da la clase
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_balsnap_account ON account_balances(account_id, date)`,
 
   `CREATE TABLE IF NOT EXISTS categories (
      id INTEGER PRIMARY KEY AUTOINCREMENT,

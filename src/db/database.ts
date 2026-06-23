@@ -28,13 +28,24 @@ export function getDB(): Promise<Database> {
  */
 async function migrate(db: Database): Promise<void> {
   // parent_id en categories: jerarquía de categorías.
-  const cols = (await db.select(
+  const catCols = (await db.select(
     "PRAGMA table_info(categories)",
   )) as Array<{ name: string }>;
-  if (!cols.some((c) => c.name === "parent_id")) {
+  if (!catCols.some((c) => c.name === "parent_id")) {
     await db.execute(
       "ALTER TABLE categories ADD COLUMN parent_id INTEGER REFERENCES categories(id)",
     );
+  }
+
+  // manual / class en accounts: cuentas manuales y patrimonio neto.
+  const accCols = (await db.select(
+    "PRAGMA table_info(accounts)",
+  )) as Array<{ name: string }>;
+  if (!accCols.some((c) => c.name === "manual")) {
+    await db.execute("ALTER TABLE accounts ADD COLUMN manual INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!accCols.some((c) => c.name === "class")) {
+    await db.execute("ALTER TABLE accounts ADD COLUMN class TEXT NOT NULL DEFAULT 'activo'");
   }
 }
 

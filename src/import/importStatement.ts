@@ -14,7 +14,7 @@ import { dedupeKey } from "../lib/text";
 import { getDB, exec } from "../db/database";
 import type { AccountType, ImportResult } from "../types";
 
-const ACCOUNT_LABEL: Record<AccountType, string> = {
+const ACCOUNT_LABEL: Partial<Record<AccountType, string>> = {
   checking: "Cuenta Nómina",
   savings: "Cuenta de Ahorro",
 };
@@ -37,7 +37,7 @@ export async function importStatementFromBytes(
     );
   }
 
-  const accountName = account.name ?? ACCOUNT_LABEL[account.type];
+  const accountName = account.name ?? ACCOUNT_LABEL[account.type] ?? "Cuenta";
   const accountId = await upsertAccount({
     name: accountName,
     type: account.type,
