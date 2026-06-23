@@ -1,5 +1,6 @@
 import { NavLink, Routes, Route } from "react-router-dom";
 import { useApp } from "./state/AppContext";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { Dashboard } from "./views/Dashboard";
 import { Movimientos } from "./views/Movimientos";
 import { Categorizar } from "./views/Categorizar";
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="/ajustes" element={<Ajustes />} />
         </Routes>
       </main>
+      <UpdateBanner />
     </div>
   );
 }

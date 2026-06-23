@@ -50,6 +50,9 @@ Leyenda: ✅ hecho · 🔄 en curso · ⏳ pendiente · 💡 idea/backlog
   portable (generados en `src-tauri/target/release/`).
 - ✅ **CI con GitHub Actions** (`.github/workflows/build.yml`): al etiquetar `v*` compila
   `.msi` (Windows) y `.dmg` arm64 (macOS) en paralelo y los adjunta a una Release.
+- ✅ **Auto-actualización** (`tauri-plugin-updater`): al iniciar comprueba la última Release de
+  GitHub; si hay versión nueva avisa y, al pulsar «Actualizar», descarga/instala y reinicia.
+  Requiere los secretos de firma en GitHub (`TAURI_SIGNING_PRIVATE_KEY` / `..._PASSWORD`).
 - ⏳ Build nativo **macOS** verificado en el Mac (M4) + **OCR de Apple Vision** (el de Windows
   ya está; falta el equivalente macOS).
 - ⏳ Documentar en README la instalación del instalador para el usuario final.

@@ -166,6 +166,15 @@ tr.date-group:hover td { background: var(--bg-soft); }
 .link-btn { background: none; border: none; padding: 0 2px; color: var(--accent); cursor: pointer; font-size: 12px; }
 .link-btn:hover { background: none; text-decoration: underline; }
 
+/* Aviso de actualización disponible */
+.update-banner {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 150; display: flex; align-items: center; gap: 12px;
+  background: var(--bg-elev); color: var(--text);
+  border: 1px solid var(--accent); border-radius: 10px; padding: 10px 16px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4); max-width: 90vw; font-size: 14px;
+}
+
 /* Estado vacío */
 .empty-state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
