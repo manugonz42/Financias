@@ -92,8 +92,9 @@ y desbloquean el patrimonio neto, el mayor diferenciador.
 6. ✅ **Reconciliación (marcar como revisado)** — flag `reconciled` por movimiento, checkbox y
    filtro (conciliados/pendientes) en Movimientos, recuento y conciliar/desmarcar en bloque.
    (El cuadre de saldo ya lo garantiza el parser al importar.)
-7. ⏳ **Transacciones programadas / próximos pagos** — calendario de pagos futuros y recurrentes
-   previstos (proyectar a futuro las suscripciones que ya se detectan).
+7. ✅ **Transacciones programadas / próximos pagos** — tabla `scheduled_payments`, pestaña
+   «Programados» (alta/edición, «Pagado» avanza la fecha según frecuencia) y widget
+   «Próximos pagos» con días restantes. *Pendiente:* proyectar las suscripciones autodetectadas.
 8. ⏳ **Adjuntar recibos** a un movimiento.
 9. ⏳ **Rollover de presupuesto** (estilo envelope: lo no gastado pasa al mes siguiente).
 
