@@ -1,4 +1,5 @@
 import { NavLink, Routes, Route } from "react-router-dom";
+import { useApp } from "./state/AppContext";
 import { Dashboard } from "./views/Dashboard";
 import { Movimientos } from "./views/Movimientos";
 import { Categorizar } from "./views/Categorizar";
@@ -22,6 +23,7 @@ const NAV = [
 ];
 
 export default function App() {
+  const { theme, setTheme } = useApp();
   return (
     <div className="app">
       <aside className="sidebar">
@@ -39,6 +41,14 @@ export default function App() {
             </NavLink>
           ))}
         </nav>
+        <button
+          className="navlink theme-toggle"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          title="Cambiar tema"
+        >
+          <span>{theme === "dark" ? "☀️" : "🌙"}</span>
+          <span>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span>
+        </button>
       </aside>
       <main className="main">
         <Routes>

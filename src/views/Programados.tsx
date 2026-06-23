@@ -16,7 +16,7 @@ function whenLabel(iso: string): { text: string; cls: string } {
 }
 
 export function Programados() {
-  const { version, reload } = useApp();
+  const { version, reload, toast } = useApp();
   const [rows, setRows] = useState<ScheduledRow[]>([]);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
@@ -78,7 +78,7 @@ export function Programados() {
                     <td className="right amount neg">{formatEUR(s.amount)}</td>
                     <td className="right">
                       <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
-                        <button className="link-btn" onClick={async () => { await markPaid(s.id); await refresh(); }} title="Marcar pagado y avanzar fecha">Pagado</button>
+                        <button className="link-btn" onClick={async () => { await markPaid(s.id); toast(`«${s.name}» marcado como pagado`); await refresh(); }} title="Marcar pagado y avanzar fecha">Pagado</button>
                         <button className="link-btn" onClick={() => setEditing(s.id)}>Editar</button>
                         <button className="link-btn" style={{ color: "var(--bad)" }} onClick={async () => { if (confirm(`¿Borrar "${s.name}"?`)) { await deleteScheduled(s.id); await refresh(); } }}>Borrar</button>
                       </div>

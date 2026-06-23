@@ -33,3 +33,13 @@ export async function getBudgetRollover(): Promise<boolean> {
 export async function setBudgetRollover(v: boolean): Promise<void> {
   await setSetting("budget_rollover", v ? "1" : "0");
 }
+
+export type Theme = "dark" | "light";
+
+export async function getTheme(): Promise<Theme> {
+  return (await getSetting("theme")) === "light" ? "light" : "dark";
+}
+
+export async function setThemeSetting(v: Theme): Promise<void> {
+  await setSetting("theme", v);
+}

@@ -18,7 +18,7 @@ export function SplitEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { categories } = useApp();
+  const { categories, toast } = useApp();
   const target = +Math.abs(tx.importe).toFixed(2);
   const [parts, setParts] = useState<Part[]>([]);
   const [busy, setBusy] = useState(false);
@@ -70,6 +70,7 @@ export function SplitEditor({
       parts.map((p) => ({ category_id: p.category_id, amount: parseFloat(p.amount) || 0 })),
     );
     setBusy(false);
+    toast("Movimiento dividido");
     onSaved();
     onClose();
   }
@@ -77,6 +78,7 @@ export function SplitEditor({
     setBusy(true);
     await clearSplits(tx.id);
     setBusy(false);
+    toast("División quitada");
     onSaved();
     onClose();
   }

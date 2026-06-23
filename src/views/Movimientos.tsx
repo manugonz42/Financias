@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { AccountSelector, MonthSelect, ExcludeInternalToggle } from "../components/Controls";
 import { listTransactions, sumFlows, distinctMonths, distinctSubtypes, setReconciled, setReconciledBulk } from "../data/transactions";
@@ -22,7 +22,9 @@ const SUBTYPE_LABEL: Record<string, string> = {
 };
 
 export function Movimientos() {
-  const { accountId, excludeInternal, categories, version, reload } = useApp();
+  const { accountId, excludeInternal, categories, version, reload, toast } = useApp();
+  const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  const [editingCat, setEditingCat] = useState<number | null>(null);
   const [months, setMonths] = useState<string[]>([]);
   const [subtypes, setSubtypes] = useState<string[]>([]);
   const [month, setMonth] = useState("");
@@ -31,6 +33,8 @@ export function Movimientos() {
   const [search, setSearch] = useState("");
   const [flow, setFlow] = useState<"" | "expense" | "income">("");
   const [recon, setRecon] = useState<"" | "yes" | "no">("");
+  const [sort, setSort] = useState<"fecha-desc" | "fecha-asc" | "imp-desc" | "imp-asc">("fecha-desc");
+  const [groupByDate, setGroupByDate] = useState(true);
   const [rows, setRows] = useState<Transaction[]>([]);
   const [totals, setTotals] = useState({ expense: 0, income: 0 });
   const [loading, setLoading] = useState(false);
@@ -74,7 +78,9 @@ export function Movimientos() {
 
   async function changeCategory(txId: number, catId: number) {
     const n = await reassignCategoryByElement(txId, catId);
+    setEditingCat(null);
     setNote(n > 1 ? `Actualizados ${n} movimientos con el mismo concepto.` : "");
+    toast(n > 1 ? `Categoría aplicada a ${n} movimientos` : "Categoría actualizada");
     reload();
   }
 
@@ -86,9 +92,20 @@ export function Movimientos() {
   async function reconcileAll(value: boolean) {
     await setReconciledBulk(rows.map((r) => r.id), value);
     setRows((prev) => prev.map((r) => ({ ...r, reconciled: value ? 1 : 0 })));
+    toast(value ? "Movimientos conciliados" : "Conciliación deshecha");
   }
 
   const reconciledCount = rows.filter((r) => r.reconciled === 1).length;
+
+  const sortedRows = useMemo(() => {
+    const r = [...rows];
+    if (sort === "fecha-asc") r.reverse();
+    else if (sort === "imp-desc") r.sort((a, b) => Math.abs(b.importe) - Math.abs(a.importe));
+    else if (sort === "imp-asc") r.sort((a, b) => Math.abs(a.importe) - Math.abs(b.importe));
+    return r; // fecha-desc: ya viene así
+  }, [rows, sort]);
+
+  const showGroups = groupByDate && (sort === "fecha-desc" || sort === "fecha-asc");
 
   return (
     <div>
@@ -124,6 +141,16 @@ export function Movimientos() {
           <option value="yes">Solo conciliados</option>
           <option value="no">Solo pendientes</option>
         </select>
+        <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} title="Ordenar">
+          <option value="fecha-desc">Fecha (recientes)</option>
+          <option value="fecha-asc">Fecha (antiguos)</option>
+          <option value="imp-desc">Importe (mayor)</option>
+          <option value="imp-asc">Importe (menor)</option>
+        </select>
+        <label className="row" style={{ gap: 6, cursor: "pointer", fontSize: 13 }} title="Mostrar separadores por fecha">
+          <input type="checkbox" checked={groupByDate} onChange={(e) => setGroupByDate(e.target.checked)} style={{ width: 16, height: 16 }} />
+          Agrupar por fecha
+        </label>
         <input
           className="grow"
           placeholder="Buscar concepto o comercio…"
@@ -165,8 +192,19 @@ export function Movimientos() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((t) => (
-              <tr key={t.id} style={{ opacity: t.reconciled === 1 ? 0.6 : 1 }}>
+            {(() => {
+              let lastDate = "";
+              return sortedRows.map((t) => {
+                const showHeader = showGroups && t.fecha_operacion !== lastDate;
+                lastDate = t.fecha_operacion;
+                return (
+                  <Fragment key={t.id}>
+                    {showHeader && (
+                      <tr className="date-group">
+                        <td colSpan={8}>{formatDate(t.fecha_operacion)}</td>
+                      </tr>
+                    )}
+                    <tr style={{ opacity: t.reconciled === 1 ? 0.6 : 1 }}>
                 <td>
                   <input
                     type="checkbox"
@@ -193,17 +231,32 @@ export function Movimientos() {
                       >
                         ✂ Dividido ({t.split_count})
                       </button>
+                    ) : editingCat === t.id ? (
+                      <select
+                        value={t.category_id ?? ""}
+                        onChange={(e) => changeCategory(t.id, Number(e.target.value))}
+                        onBlur={() => setEditingCat(null)}
+                        autoFocus
+                        style={{ maxWidth: 160, padding: "4px 6px", fontSize: 12 }}
+                      >
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                        ))}
+                      </select>
                     ) : (
                       <>
-                        <select
-                          value={t.category_id ?? ""}
-                          onChange={(e) => changeCategory(t.id, Number(e.target.value))}
-                          style={{ maxWidth: 150, padding: "4px 6px", fontSize: 12 }}
+                        <button
+                          className="cat-badge"
+                          onClick={() => setEditingCat(t.id)}
+                          title="Clic para cambiar la categoría"
+                          style={{
+                            background: `${t.category_color ?? "#9ca3af"}22`,
+                            borderColor: `${t.category_color ?? "#9ca3af"}55`,
+                          }}
                         >
-                          {categories.map((c) => (
-                            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                          ))}
-                        </select>
+                          <span>{catById.get(t.category_id ?? -1)?.icon ?? "•"}</span>
+                          <span>{t.category_name ?? "—"}</span>
+                        </button>
                         <button className="link-btn" onClick={() => setSplitting(t)} title="Dividir en varias categorías">✂</button>
                       </>
                     )}
@@ -219,10 +272,16 @@ export function Movimientos() {
                 <td className="muted">{SUBTYPE_LABEL[t.subtype ?? ""] ?? t.subtype}</td>
                 <td className={`right amount ${t.importe < 0 ? "neg" : "pos"}`}>{formatEUR(t.importe)}</td>
                 <td className="right muted">{t.saldo != null ? formatEUR(t.saldo) : ""}</td>
-              </tr>
-            ))}
+                    </tr>
+                  </Fragment>
+                );
+              });
+            })()}
             {rows.length === 0 && !loading && (
-              <tr><td colSpan={8} className="muted" style={{ textAlign: "center", padding: 30 }}>Sin movimientos para estos filtros.</td></tr>
+              <tr><td colSpan={8} className="muted" style={{ textAlign: "center", padding: 40 }}>
+                <div style={{ fontSize: 26, marginBottom: 6 }}>🔍</div>
+                Sin movimientos para estos filtros.
+              </td></tr>
             )}
           </tbody>
         </table>
