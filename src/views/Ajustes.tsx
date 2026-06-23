@@ -4,7 +4,7 @@ import { ExcludeInternalToggle } from "../components/Controls";
 import { CategoryManager } from "../components/CategoryManager";
 import { ManualAccounts } from "../components/ManualAccounts";
 import { getOwnerName, setSetting } from "../data/settings";
-import { listAccounts, currentBalance, accountTypeLabel } from "../data/accounts";
+import { listAccounts, currentBalance, accountTypeLabel, addBalanceSnapshot } from "../data/accounts";
 import { resetData } from "../db/database";
 import { formatEUR } from "../lib/format";
 import type { Account } from "../types";
@@ -54,14 +54,7 @@ export function Ajustes() {
         <h3>Cuentas importadas</h3>
         {accounts.length === 0 && <span className="muted">Aún no hay cuentas importadas.</span>}
         {accounts.map((a) => (
-          <div className="result-line" key={a.id}>
-            <span>
-              <b>{a.name}</b>{" "}
-              <span className="muted">· {accountTypeLabel(a.type)}{a.last4 ? ` ····${a.last4}` : ""}</span>
-            </span>
-            <span className="spacer" />
-            <span>{formatEUR(a.balance)}</span>
-          </div>
+          <BalanceRow key={a.id} account={a} onSaved={() => { loadAccounts(); reload(); }} />
         ))}
       </div>
 
@@ -115,6 +108,80 @@ export function Ajustes() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function BalanceRow({
+  account,
+  onSaved,
+}: {
+  account: Account & { balance: number };
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [busy, setBusy] = useState(false);
+
+  function startEdit() {
+    setValue(account.balance.toFixed(2));
+    setDate(new Date().toISOString().slice(0, 10));
+    setEditing(true);
+  }
+
+  async function save() {
+    const n = parseFloat(value.replace(",", "."));
+    if (!Number.isFinite(n)) return;
+    setBusy(true);
+    await addBalanceSnapshot(account.id, date, n);
+    setBusy(false);
+    setEditing(false);
+    onSaved();
+  }
+
+  if (!editing) {
+    return (
+      <div className="result-line">
+        <span>
+          <b>{account.name}</b>{" "}
+          <span className="muted">
+            · {accountTypeLabel(account.type)}
+            {account.last4 ? ` ····${account.last4}` : ""}
+          </span>
+        </span>
+        <span className="spacer" />
+        <span>{formatEUR(account.balance)}</span>
+        <button className="link-btn" onClick={startEdit} style={{ marginLeft: 8 }}>
+          Editar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="result-line" style={{ flexWrap: "wrap", gap: 8 }}>
+      <span><b>{account.name}</b></span>
+      <span className="spacer" />
+      <label className="row" style={{ gap: 6, fontSize: 13 }}>
+        <span className="muted">Fecha</span>
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      </label>
+      <label className="row" style={{ gap: 6, fontSize: 13 }}>
+        <span className="muted">Saldo €</span>
+        <input
+          type="number"
+          step="0.01"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          style={{ width: 130 }}
+          autoFocus
+        />
+      </label>
+      <button onClick={() => setEditing(false)} disabled={busy}>Cancelar</button>
+      <button className="primary" onClick={() => void save()} disabled={busy || value === ""}>
+        {busy ? "Guardando…" : "Guardar"}
+      </button>
     </div>
   );
 }
