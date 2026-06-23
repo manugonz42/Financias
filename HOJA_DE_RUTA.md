@@ -72,15 +72,17 @@ y desbloquean el patrimonio neto, el mayor diferenciador.
 - ✅ **Categorías jerárquicas editables** — árbol de profundidad libre (`parent_id`), CRUD
   desde Ajustes (crear/editar/mover/borrar). Asignación de movimientos a cualquier nivel.
   `subtype` se mantiene como dimensión independiente "tipo de movimiento".
-  *Pendiente de seguimiento:* roll-up de subcategorías en gráficos/presupuestos y drill-down
-  del donut (se apoyan en `subtreeIds`).
+  *Pendiente de seguimiento:* roll-up de subcategorías en presupuestos (el donut ya hace
+  drill-down con `subtreeIds`).
 
-1. ⏳ **Cuentas manuales** — crear cuentas que no vienen de un PDF (efectivo, otro banco,
-   broker, hipoteca). Hoy todo depende de importar extracto.
-2. ⏳ **Patrimonio neto (net worth) en el tiempo** — activos − pasivos, con gráfico de
-   evolución. *Feature nº1 de todas las top.*
-3. ⏳ **Tipos de cuenta activo/pasivo** — modelar tarjetas de crédito, préstamos y deudas,
-   no solo cuentas de flujo. Necesario para que el patrimonio neto sea real.
+1. ✅ **Cuentas manuales** — crear cuentas que no vienen de un PDF (efectivo, inversión,
+   inmueble, tarjeta, préstamo, hipoteca…) con saldos por snapshots fechados. Gestión en
+   Ajustes; aparecen en el selector de cuentas.
+2. ✅ **Patrimonio neto (net worth) en el tiempo** — `netWorthSeries` = activos − pasivos,
+   combinando saldos de movimientos (importadas) y snapshots (manuales), con forward-fill.
+   Ya se refleja en el widget "Evolución de saldo / patrimonio".
+3. ✅ **Tipos de cuenta activo/pasivo** — `accounts.manual` + `accounts.class`; tarjetas,
+   préstamos e hipotecas como pasivos que restan en el patrimonio neto.
 4. ⏳ **Split de transacciones** — dividir un movimiento en varias categorías
    (ej. ticket de súper = comida + droguería + ocio).
 5. ⏳ **Metas de ahorro (goals)** — fijar objetivo (p. ej. "3.000 € vacaciones") y ver progreso.
