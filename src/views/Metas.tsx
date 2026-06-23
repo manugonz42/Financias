@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { IconPicker } from "../components/IconPicker";
+import { ColorPicker } from "../components/ColorPicker";
 import { EmptyState } from "../components/EmptyState";
 import { listGoals, createGoal, updateGoal, deleteGoal, addContribution } from "../data/goals";
 import { goalPercent, monthlyTarget } from "../lib/goals";
@@ -162,7 +163,7 @@ function GoalForm({ goal, onCancel, onSaved }: { goal?: Goal; onCancel: () => vo
       <div className="row" style={{ gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
         <IconPicker value={icon} onChange={setIcon} />
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre (p. ej. Vacaciones)" style={{ minWidth: 200, flex: 1 }} autoFocus />
-        <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ width: 44, padding: 2 }} aria-label="Color" />
+        <ColorPicker value={color} onChange={setColor} />
       </div>
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <label className="row" style={{ gap: 6, fontSize: 13 }}>

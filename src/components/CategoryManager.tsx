@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { IconPicker } from "./IconPicker";
+import { ColorPicker, CATEGORY_COLORS, colorForName } from "./ColorPicker";
 import {
   buildCategoryTree,
   flattenTree,
@@ -196,8 +197,11 @@ function AddForm(props: {
 }) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("•");
-  const [color, setColor] = useState("#9ca3af");
+  const [color, setColor] = useState(CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)]);
   const [kind, setKind] = useState<Category["kind"]>(props.parentKind ?? "gasto");
+  const [colorTouched, setColorTouched] = useState(false);
+
+  const effectiveColor = colorTouched ? color : colorForName(name) || color;
 
   const canSave = name.trim().length > 0 && !props.busy;
 
@@ -205,7 +209,7 @@ function AddForm(props: {
     <div className="row" style={{ gap: 8, flexWrap: "wrap", padding: "10px 0" }}>
       <IconPicker value={icon} onChange={setIcon} />
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder={props.parentId == null ? "Nueva categoría" : "Nueva subcategoría"} style={{ minWidth: 200 }} autoFocus />
-      <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ width: 44, padding: 2 }} aria-label="Color" />
+      <ColorPicker value={effectiveColor} onChange={(c) => { setColor(c); setColorTouched(true); }} />
       {props.parentKind == null ? (
         <select value={kind} onChange={(e) => setKind(e.target.value as Category["kind"])}>
           <option value="gasto">Gasto</option>
@@ -217,7 +221,7 @@ function AddForm(props: {
       )}
       <span className="spacer" />
       <button onClick={props.onCancel} disabled={props.busy}>Cancelar</button>
-      <button className="primary" disabled={!canSave} onClick={() => props.onSave({ name, kind, color, icon, parentId: props.parentId })}>Guardar</button>
+      <button className="primary" disabled={!canSave} onClick={() => props.onSave({ name, kind, color: effectiveColor, icon, parentId: props.parentId })}>Guardar</button>
     </div>
   );
 }
@@ -247,7 +251,7 @@ function EditForm(props: {
     <div className="row" style={{ gap: 8, flexWrap: "wrap", padding: "10px 0", paddingLeft: node.depth * 20 }}>
       <IconPicker value={icon} onChange={setIcon} />
       <input value={name} onChange={(e) => setName(e.target.value)} style={{ minWidth: 200 }} autoFocus />
-      <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ width: 44, padding: 2 }} aria-label="Color" />
+      <ColorPicker value={color} onChange={setColor} />
       <label className="row" style={{ gap: 6, fontSize: 13 }}>
         <span className="muted">Padre:</span>
         <select value={parentId ?? ""} onChange={(e) => setParentId(e.target.value === "" ? null : Number(e.target.value))}>
