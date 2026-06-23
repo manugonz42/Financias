@@ -7,7 +7,7 @@ import { useApp } from "../state/AppContext";
 import { AccountSelector, DateRange, ExcludeInternalToggle } from "../components/Controls";
 import { WIDGETS } from "../widgets/widgets";
 import { dateBounds } from "../data/transactions";
-import { loadLayout, saveLayoutItem, setWidgetVisible } from "../data/dashboard";
+import { loadLayout, saveLayoutItem, setWidgetVisible, resetLayout } from "../data/dashboard";
 
 const Grid = WidthProvider(GridLayout);
 
@@ -30,7 +30,7 @@ function defaultLayout(): Layout[] {
 }
 
 export function Dashboard() {
-  const { accountId, excludeInternal, version } = useApp();
+  const { accountId, excludeInternal, version, reload } = useApp();
   const [bounds, setBounds] = useState<{ min: string; max: string } | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -93,6 +93,11 @@ export function Dashboard() {
     else void setWidgetVisible(key, 1);
   }
 
+  async function resetDash() {
+    await resetLayout();
+    reload(); // recarga con la disposición por defecto
+  }
+
   if (ready && !bounds) {
     return (
       <div>
@@ -135,6 +140,9 @@ export function Dashboard() {
               ))}
             </select>
           )}
+          <button onClick={() => void resetDash()} title="Volver a la disposición por defecto">
+            Restablecer disposición
+          </button>
         </div>
       </div>
 

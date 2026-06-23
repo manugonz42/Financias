@@ -234,9 +234,9 @@ export interface WidgetDef {
 }
 
 export const WIDGETS: WidgetDef[] = [
+  { key: "donut", title: "Gasto por categoría", w: 8, h: 10, Body: CategoryDonutBody },
   { key: "kpis", title: "Resumen del periodo", w: 4, h: 4, Body: KpiBody },
   { key: "networth", title: "Patrimonio neto", w: 4, h: 4, Body: NetWorthBody },
-  { key: "donut", title: "Gasto por categoría", w: 4, h: 9, Body: CategoryDonutBody },
   { key: "bars", title: "Gastos vs ingresos por mes", w: 8, h: 8, Body: MonthlyBarsBody },
   { key: "balance", title: "Evolución de saldo / patrimonio", w: 8, h: 8, Body: BalanceLineBody },
   { key: "budgets", title: "Presupuestos del mes", w: 4, h: 8, Body: BudgetsBody },

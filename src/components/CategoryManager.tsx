@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useApp } from "../state/AppContext";
+import { IconPicker } from "./IconPicker";
 import {
   buildCategoryTree,
   flattenTree,
@@ -202,7 +203,7 @@ function AddForm(props: {
 
   return (
     <div className="row" style={{ gap: 8, flexWrap: "wrap", padding: "10px 0" }}>
-      <input value={icon} onChange={(e) => setIcon(e.target.value)} style={{ width: 56, textAlign: "center" }} aria-label="Icono" />
+      <IconPicker value={icon} onChange={setIcon} />
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder={props.parentId == null ? "Nueva categoría" : "Nueva subcategoría"} style={{ minWidth: 200 }} autoFocus />
       <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ width: 44, padding: 2 }} aria-label="Color" />
       {props.parentKind == null ? (
@@ -244,7 +245,7 @@ function EditForm(props: {
 
   return (
     <div className="row" style={{ gap: 8, flexWrap: "wrap", padding: "10px 0", paddingLeft: node.depth * 20 }}>
-      <input value={icon} onChange={(e) => setIcon(e.target.value)} style={{ width: 56, textAlign: "center" }} aria-label="Icono" />
+      <IconPicker value={icon} onChange={setIcon} />
       <input value={name} onChange={(e) => setName(e.target.value)} style={{ minWidth: 200 }} autoFocus />
       <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ width: 44, padding: 2 }} aria-label="Color" />
       <label className="row" style={{ gap: 6, fontSize: 13 }}>

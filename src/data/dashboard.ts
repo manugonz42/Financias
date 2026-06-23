@@ -37,3 +37,8 @@ export async function setWidgetVisible(key: string, visible: number): Promise<vo
     [key, visible],
   );
 }
+
+/** Borra el layout guardado para volver a la disposición por defecto. */
+export async function resetLayout(): Promise<void> {
+  await exec("DELETE FROM dashboard_layout");
+}
