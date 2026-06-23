@@ -4,6 +4,7 @@ import { UpdateBanner } from "./components/UpdateBanner";
 import { Dashboard } from "./views/Dashboard";
 import { Movimientos } from "./views/Movimientos";
 import { Categorizar } from "./views/Categorizar";
+import { Reglas } from "./views/Reglas";
 import { Importar } from "./views/Importar";
 import { Presupuestos } from "./views/Presupuestos";
 import { Metas } from "./views/Metas";
@@ -15,6 +16,7 @@ const NAV = [
   { to: "/", label: "Dashboard", icon: "📊", end: true },
   { to: "/movimientos", label: "Movimientos", icon: "📋" },
   { to: "/categorizar", label: "Categorizar", icon: "🏷️" },
+  { to: "/reglas", label: "Reglas", icon: "📐" },
   { to: "/presupuestos", label: "Presupuestos", icon: "🎯" },
   { to: "/metas", label: "Metas", icon: "🐷" },
   { to: "/programados", label: "Programados", icon: "📅" },
@@ -56,6 +58,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/movimientos" element={<Movimientos />} />
           <Route path="/categorizar" element={<Categorizar />} />
+          <Route path="/reglas" element={<Reglas />} />
           <Route path="/presupuestos" element={<Presupuestos />} />
           <Route path="/metas" element={<Metas />} />
           <Route path="/programados" element={<Programados />} />

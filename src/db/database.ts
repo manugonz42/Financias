@@ -74,6 +74,11 @@ async function migrate(db: Database): Promise<void> {
   if (!txCols.some((c) => c.name === "receipt_path")) {
     await db.execute("ALTER TABLE transactions ADD COLUMN receipt_path TEXT");
   }
+  // transfer_match_id en transactions: id del movimiento contrario en la
+  // conciliación de traspasos por importe.
+  if (!txCols.some((c) => c.name === "transfer_match_id")) {
+    await db.execute("ALTER TABLE transactions ADD COLUMN transfer_match_id INTEGER");
+  }
 }
 
 /** Helper de selección tipada. */

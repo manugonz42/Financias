@@ -26,6 +26,44 @@ export async function getOwnerName(): Promise<string> {
   return (await getSetting("owner_name")) ?? "";
 }
 
+// --- Configuración de la conciliación de traspasos por importe ----------------
+
+export interface ReconcileConfig {
+  /** Margen de días entre la salida y el ingreso del mismo traspaso. */
+  windowDays: number;
+  /** Tolerancia de importe en euros (p. ej. comisiones de transferencia). */
+  amountTolerance: number;
+  /** Ids de categoría excluidas del emparejamiento (no se casan nunca). */
+  excludedCategoryIds: number[];
+}
+
+const RECONCILE_DEFAULTS: ReconcileConfig = {
+  windowDays: 7,
+  amountTolerance: 0,
+  excludedCategoryIds: [],
+};
+
+export async function getReconcileConfig(): Promise<ReconcileConfig> {
+  const [w, t, ex] = await Promise.all([
+    getSetting("reconcile_window_days"),
+    getSetting("reconcile_tolerance"),
+    getSetting("reconcile_excluded_categories"),
+  ]);
+  return {
+    windowDays: w != null ? Number(w) : RECONCILE_DEFAULTS.windowDays,
+    amountTolerance: t != null ? Number(t) : RECONCILE_DEFAULTS.amountTolerance,
+    excludedCategoryIds: ex
+      ? ex.split(",").map(Number).filter((n) => Number.isFinite(n))
+      : [],
+  };
+}
+
+export async function setReconcileConfig(c: ReconcileConfig): Promise<void> {
+  await setSetting("reconcile_window_days", String(c.windowDays));
+  await setSetting("reconcile_tolerance", String(c.amountTolerance));
+  await setSetting("reconcile_excluded_categories", c.excludedCategoryIds.join(","));
+}
+
 export async function getBudgetRollover(): Promise<boolean> {
   return (await getSetting("budget_rollover")) === "1";
 }

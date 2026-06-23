@@ -163,4 +163,41 @@ export const SCHEMA: string[] = [
      nuevos INTEGER NOT NULL DEFAULT 0,
      duplicados INTEGER NOT NULL DEFAULT 0
    )`,
+
+  // Etiquetas libres (con color) asignables a varios movimientos.
+  `CREATE TABLE IF NOT EXISTS tags (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL UNIQUE,
+     color TEXT NOT NULL DEFAULT '#6366f1'
+   )`,
+
+  `CREATE TABLE IF NOT EXISTS transaction_tags (
+     transaction_id INTEGER NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
+     tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+     PRIMARY KEY (transaction_id, tag_id)
+   )`,
+
+  // Inversiones: un activo (acción/fondo/cripto) con su valor actual por unidad,
+  // y los lotes de compra/venta (aportaciones). El P/L se calcula con ambos.
+  `CREATE TABLE IF NOT EXISTS investments (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL,
+     kind TEXT NOT NULL DEFAULT 'accion',   -- 'accion' | 'fondo' | 'cripto' | 'otro'
+     ticker TEXT,
+     currency TEXT NOT NULL DEFAULT 'EUR',
+     current_price REAL NOT NULL DEFAULT 0,
+     updated_at TEXT
+   )`,
+
+  `CREATE TABLE IF NOT EXISTS investment_lots (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     investment_id INTEGER NOT NULL REFERENCES investments(id) ON DELETE CASCADE,
+     fecha TEXT NOT NULL,
+     units REAL NOT NULL,                   -- positivo = compra, negativo = venta
+     price REAL NOT NULL,                   -- precio por unidad de la operación
+     fees REAL NOT NULL DEFAULT 0,
+     notes TEXT
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_lots_inv ON investment_lots(investment_id)`,
 ];
