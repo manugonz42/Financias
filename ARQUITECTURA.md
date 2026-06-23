@@ -112,6 +112,9 @@ jobs:
           args: ${{ matrix.args }}
 ```
 
+> 📦 **Cómo sacar una versión (paso a paso): ver [`PUBLICAR_VERSION.md`](PUBLICAR_VERSION.md).**
+> Cubre el auto-update: subir versión en los 3 archivos → tag `vX.Y.Z` → publicar Release.
+
 - Disparo por **tag** (`git tag v0.1.0 && git push --tags`) → crea una *Release* en
   GitHub con el `.dmg` y el `.msi` adjuntos (permanentes).
 - También se puede lanzar a mano (`workflow_dispatch`).
