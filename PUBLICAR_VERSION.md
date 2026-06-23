@@ -22,7 +22,17 @@ En el repo de GitHub → **Settings → Secrets and variables → Actions**:
 
 ---
 
-## Pasos para cada versión
+## Atajo (recomendado)
+
+```bash
+npm run release 0.2.0            # bumpea los 3 archivos, commitea y crea el tag v0.2.0
+npm run release 0.2.0 -- --push  # además sube commit y tag (dispara el CI)
+```
+
+Luego solo queda **publicar la Release** (paso 5). Si prefieres hacerlo a mano, sigue los
+pasos de abajo.
+
+## Pasos para cada versión (manual)
 
 1. **Sube el número en los 3 archivos** (deben coincidir exactamente):
    - `src-tauri/tauri.conf.json` → `"version": "X.Y.Z"`
