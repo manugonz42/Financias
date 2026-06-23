@@ -96,7 +96,13 @@ y desbloquean el patrimonio neto, el mayor diferenciador.
    «Programados» (alta/edición, «Pagado» avanza la fecha según frecuencia) y widget
    «Próximos pagos» con días restantes. *Pendiente:* proyectar las suscripciones autodetectadas.
 8. ⏳ **Adjuntar recibos** a un movimiento.
-9. ⏳ **Rollover de presupuesto** (estilo envelope: lo no gastado pasa al mes siguiente).
+9. ✅ **Rollover de presupuesto** (estilo envelope) — toggle en Presupuestos: disponible =
+   límite + acumulado (límite·meses desde el primer movimiento − gastado previo). Se refleja
+   en la vista y en el widget.
+
+**Otros ajustes:** al borrar una categoría, sus movimientos/splits/reglas pasan al padre (o al
+fallback de su tipo —Otros gastos/ingresos/Traspaso interno— si es raíz), nunca quedan sin
+categoría. Botón «↻ Refrescar» en el dashboard.
 
 ## Fase 7 — UI / UX ⏳
 
