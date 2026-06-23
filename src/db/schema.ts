@@ -17,7 +17,8 @@ export const SCHEMA: string[] = [
      name TEXT NOT NULL UNIQUE,
      kind TEXT NOT NULL,                 -- 'gasto' | 'ingreso' | 'interno'
      color TEXT NOT NULL DEFAULT '#9ca3af',
-     icon TEXT NOT NULL DEFAULT '•'
+     icon TEXT NOT NULL DEFAULT '•',
+     parent_id INTEGER REFERENCES categories(id)   -- NULL = categoría raíz
    )`,
 
   `CREATE TABLE IF NOT EXISTS category_rules (

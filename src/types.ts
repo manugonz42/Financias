@@ -18,6 +18,15 @@ export interface Category {
   kind: "gasto" | "ingreso" | "interno";
   color: string;
   icon: string;
+  /** Categoría padre (NULL = raíz). Permite jerarquía de profundidad libre. */
+  parent_id: number | null;
+}
+
+/** Categoría con sus hijas resueltas, para pintar el árbol. */
+export interface CategoryNode extends Category {
+  children: CategoryNode[];
+  /** Profundidad en el árbol (0 = raíz). */
+  depth: number;
 }
 
 export interface Transaction {

@@ -23,6 +23,27 @@ export async function spendByCategory(f: TxFilters): Promise<CategorySlice[]> {
   );
 }
 
+export interface CategoryValue {
+  id: number;
+  value: number;
+}
+
+/**
+ * Gasto crudo por `category_id` (sin agrupar por jerarquía). Sirve para que el
+ * cliente haga el roll-up por subárbol (donut con drill-down). El filtro `flow`
+ * de gasto garantiza que el WHERE no esté vacío.
+ */
+export async function spendByCategoryId(f: TxFilters): Promise<CategoryValue[]> {
+  const { clause, params } = buildWhere({ ...f, flow: "expense" });
+  return query<CategoryValue>(
+    `SELECT t.category_id AS id, SUM(ABS(t.importe)) AS value
+     FROM transactions t
+     ${clause} AND t.category_id IS NOT NULL
+     GROUP BY t.category_id`,
+    params,
+  );
+}
+
 export interface MonthlyFlow {
   month: string;
   expense: number;

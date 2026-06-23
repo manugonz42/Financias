@@ -1,11 +1,13 @@
-import { useEffect, useState, type FC } from "react";
+import { useEffect, useMemo, useState, type FC } from "react";
 import { EChart } from "../components/charts/EChart";
 import { donutOption, barFlowsOption, lineOption, cashBarOption } from "../components/charts/options";
 import { formatEUR, monthKey } from "../lib/format";
-import { kpis, spendByCategory, monthlyFlows, balanceSeries, netWorthSeries, cashByMonth, detectSubscriptions } from "../data/stats";
+import { kpis, spendByCategoryId, monthlyFlows, balanceSeries, netWorthSeries, cashByMonth, detectSubscriptions } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
+import { donutSlices } from "../lib/donut";
+import { useApp } from "../state/AppContext";
 import type { TxFilters } from "../types";
-import type { CategorySlice, MonthlyFlow, BalancePoint, CashPoint, Subscription, KpiSummary } from "../data/stats";
+import type { MonthlyFlow, BalancePoint, CashPoint, Subscription, KpiSummary } from "../data/stats";
 
 export interface WidgetProps {
   accountId: number | "all";
@@ -54,12 +56,65 @@ function Kpi({ label, value, cls }: { label: string; value: number; cls: string 
 }
 
 const CategoryDonutBody: FC<WidgetProps> = (p) => {
-  const [data, setData] = useState<CategorySlice[]>([]);
+  const { categories } = useApp();
+  const [valueById, setValueById] = useState<Map<number, number>>(new Map());
+  // Pila de drill-down: ids de categorías padre por las que se ha ido entrando.
+  const [stack, setStack] = useState<number[]>([]);
+
   useEffect(() => {
-    void spendByCategory(scope(p)).then(setData);
+    void spendByCategoryId(scope(p)).then((rows) => {
+      setValueById(new Map(rows.map((r) => [r.id, r.value])));
+      setStack([]); // al cambiar filtros/datos, vuelve a la vista de padres
+    });
   }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
-  if (data.length === 0) return <span className="muted">Sin gastos en el periodo seleccionado.</span>;
-  return <EChart option={donutOption(data)} />;
+
+  const parentId = stack.length ? stack[stack.length - 1] : null;
+  const slices = useMemo(
+    () => donutSlices(categories, valueById, parentId),
+    [categories, valueById, parentId],
+  );
+  const byId = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+
+  if (valueById.size === 0)
+    return <span className="muted">Sin gastos en el periodo seleccionado.</span>;
+
+  const onEvents = {
+    click: (e: any) => {
+      const id = e?.data?.id;
+      if (id == null) return;
+      const slice = slices.find((s) => s.id === id);
+      if (slice?.drillable) setStack((s) => [...s, id]);
+    },
+  };
+
+  const centerLabel = parentId != null ? byId.get(parentId)?.name : undefined;
+
+  return (
+    <div className="widget" style={{ gap: 6 }}>
+      <div className="row" style={{ fontSize: 12, minHeight: 20, flexWrap: "wrap" }}>
+        {stack.length === 0 ? (
+          <span className="muted">Clic en una categoría para ver sus subcategorías</span>
+        ) : (
+          <>
+            <button className="link-btn" onClick={() => setStack([])}>Todas</button>
+            {stack.map((id, i) => (
+              <span key={id}>
+                <span className="muted"> › </span>
+                <button className="link-btn" onClick={() => setStack(stack.slice(0, i + 1))}>
+                  {byId.get(id)?.name ?? "?"}
+                </button>
+              </span>
+            ))}
+            <span className="spacer" />
+            <button className="link-btn" onClick={() => setStack((s) => s.slice(0, -1))}>← Volver</button>
+          </>
+        )}
+      </div>
+      <div className="widget-body">
+        <EChart option={donutOption(slices, centerLabel)} onEvents={onEvents} />
+      </div>
+    </div>
+  );
 };
 
 const MonthlyBarsBody: FC<WidgetProps> = (p) => {

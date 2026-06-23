@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { ExcludeInternalToggle } from "../components/Controls";
+import { CategoryManager } from "../components/CategoryManager";
 import { getOwnerName, setSetting } from "../data/settings";
 import { listAccounts, currentBalance } from "../data/accounts";
 import { resetData } from "../db/database";
@@ -70,6 +71,11 @@ export function Ajustes() {
           <input className="grow" value={owner} onChange={(e) => setOwner(e.target.value)} />
           <button className="primary" onClick={saveOwner}>Guardar</button>
         </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3>Categorías</h3>
+        <CategoryManager />
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>

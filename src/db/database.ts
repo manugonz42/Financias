@@ -14,11 +14,28 @@ export function getDB(): Promise<Database> {
       for (const stmt of SCHEMA) {
         await db.execute(stmt);
       }
+      await migrate(db);
       await seed(db);
       return db;
     })();
   }
   return dbPromise;
+}
+
+/**
+ * Migraciones idempotentes para BDs ya creadas en versiones anteriores
+ * (CREATE TABLE IF NOT EXISTS no añade columnas nuevas a tablas existentes).
+ */
+async function migrate(db: Database): Promise<void> {
+  // parent_id en categories: jerarquía de categorías.
+  const cols = (await db.select(
+    "PRAGMA table_info(categories)",
+  )) as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === "parent_id")) {
+    await db.execute(
+      "ALTER TABLE categories ADD COLUMN parent_id INTEGER REFERENCES categories(id)",
+    );
+  }
 }
 
 /** Helper de selección tipada. */

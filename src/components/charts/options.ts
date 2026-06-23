@@ -3,18 +3,40 @@
 import type { EChartsOption } from "echarts";
 import { formatEUR } from "../../lib/format";
 import { monthLabelShort } from "../../lib/format";
-import type { CategorySlice, MonthlyFlow, BalancePoint, CashPoint } from "../../data/stats";
+import type { MonthlyFlow, BalancePoint, CashPoint } from "../../data/stats";
+import type { DonutSlice } from "../../lib/donut";
 
 const AXIS = "#94a3b8";
 const GRID_LINE = "#334155";
 
-export function donutOption(slices: CategorySlice[]): EChartsOption {
+/**
+ * Donut de gasto por categoría. Soporta drill-down: los slices pueden llevar
+ * `id`/`drillable` y `universalTransition` hace el morph suave entre niveles.
+ * `centerLabel` muestra el nombre del nivel actual en el hueco central.
+ */
+export function donutOption(slices: DonutSlice[], centerLabel?: string): EChartsOption {
   return {
     backgroundColor: "transparent",
     textStyle: { color: "#e2e8f0" },
+    animationDurationUpdate: 600,
+    animationEasingUpdate: "cubicOut",
+    title: centerLabel
+      ? {
+          text: centerLabel,
+          left: "32%",
+          top: "47%",
+          textAlign: "center",
+          textStyle: { color: "#e2e8f0", fontSize: 13, fontWeight: 600 },
+        }
+      : undefined,
     tooltip: {
       trigger: "item",
-      formatter: (p: any) => `${p.name}<br/><b>${formatEUR(p.value)}</b> (${p.percent}%)`,
+      formatter: (p: any) => {
+        const hint = p.data?.drillable
+          ? "<br/><span style='opacity:.7'>clic para ver subcategorías</span>"
+          : "";
+        return `${p.name}<br/><b>${formatEUR(p.value)}</b> (${p.percent}%)${hint}`;
+      },
     },
     legend: {
       type: "scroll",
@@ -25,15 +47,19 @@ export function donutOption(slices: CategorySlice[]): EChartsOption {
     },
     series: [
       {
+        id: "spend",
         type: "pie",
         radius: ["45%", "72%"],
         center: ["32%", "50%"],
         avoidLabelOverlap: true,
         itemStyle: { borderColor: "#1e293b", borderWidth: 2 },
         label: { show: false },
+        universalTransition: true,
         data: slices.map((s) => ({
+          id: s.id,
           name: s.name,
           value: +s.value.toFixed(2),
+          drillable: s.drillable,
           itemStyle: { color: s.color },
         })),
       },
