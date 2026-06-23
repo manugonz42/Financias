@@ -7,7 +7,8 @@ const SELECT = `
          t.fecha_operacion, t.fecha_valor, t.concepto, t.importe, t.saldo,
          t.category_id, c.name AS category_name, c.color AS category_color,
          c.kind AS category_kind, t.subtype, t.merchant, t.card_last4,
-         t.is_internal, t.source_file
+         t.is_internal, t.source_file,
+         (SELECT COUNT(*) FROM transaction_splits s WHERE s.transaction_id = t.id) AS split_count
   FROM transactions t
   JOIN accounts a ON a.id = t.account_id
   LEFT JOIN categories c ON c.id = t.category_id`;

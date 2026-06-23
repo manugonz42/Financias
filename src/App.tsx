@@ -4,6 +4,7 @@ import { Movimientos } from "./views/Movimientos";
 import { Categorizar } from "./views/Categorizar";
 import { Importar } from "./views/Importar";
 import { Presupuestos } from "./views/Presupuestos";
+import { Metas } from "./views/Metas";
 import { Inversiones } from "./views/Inversiones";
 import { Ajustes } from "./views/Ajustes";
 
@@ -12,6 +13,7 @@ const NAV = [
   { to: "/movimientos", label: "Movimientos", icon: "📋" },
   { to: "/categorizar", label: "Categorizar", icon: "🏷️" },
   { to: "/presupuestos", label: "Presupuestos", icon: "🎯" },
+  { to: "/metas", label: "Metas", icon: "🐷" },
   { to: "/inversiones", label: "Inversiones", icon: "📈" },
   { to: "/importar", label: "Importar", icon: "📥" },
   { to: "/ajustes", label: "Ajustes", icon: "⚙️" },
@@ -42,6 +44,7 @@ export default function App() {
           <Route path="/movimientos" element={<Movimientos />} />
           <Route path="/categorizar" element={<Categorizar />} />
           <Route path="/presupuestos" element={<Presupuestos />} />
+          <Route path="/metas" element={<Metas />} />
           <Route path="/inversiones" element={<Inversiones />} />
           <Route path="/importar" element={<Importar />} />
           <Route path="/ajustes" element={<Ajustes />} />

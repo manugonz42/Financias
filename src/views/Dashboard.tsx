@@ -1,32 +1,33 @@
-import { useEffect, useState } from "react";
-import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
-import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
+import { useEffect, useState, type FC } from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Link } from "react-router-dom";
 import { useApp } from "../state/AppContext";
 import { AccountSelector, DateRange, ExcludeInternalToggle } from "../components/Controls";
-import { WIDGETS } from "../widgets/widgets";
+import { WIDGETS, type WidgetProps } from "../widgets/widgets";
 import { dateBounds } from "../data/transactions";
 import { loadLayout, saveLayoutItem, setWidgetVisible, resetLayout } from "../data/dashboard";
 
-const Grid = WidthProvider(GridLayout);
+const WIDTHS = [4, 6, 8, 12]; // 1/3, 1/2, 2/3, ancho completo (de 12 columnas)
 
-function defaultLayout(): Layout[] {
-  let x = 0;
-  let y = 0;
-  let rowH = 0;
-  const out: Layout[] = [];
-  for (const w of WIDGETS) {
-    if (x + w.w > 12) {
-      x = 0;
-      y += rowH;
-      rowH = 0;
-    }
-    out.push({ i: w.key, x, y, w: w.w, h: w.h });
-    x += w.w;
-    rowH = Math.max(rowH, w.h);
-  }
-  return out;
+interface WState {
+  key: string;
+  w: number; // columnas (1..12)
+  h: number; // filas de 40px
+  visible: boolean;
 }
 
 export function Dashboard() {
@@ -34,9 +35,10 @@ export function Dashboard() {
   const [bounds, setBounds] = useState<{ min: string; max: string } | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [layout, setLayout] = useState<Layout[]>([]);
-  const [visible, setVisible] = useState<Set<string>>(new Set());
+  const [items, setItems] = useState<WState[]>([]);
   const [ready, setReady] = useState(false);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   useEffect(() => {
     let cancelled = false;
@@ -49,18 +51,18 @@ export function Dashboard() {
         setTo((cur) => cur || b.max);
       }
       const byKey = new Map(rows.map((r) => [r.widget_key, r]));
-      const vis = new Set<string>();
-      const lay = defaultLayout().map((d) => {
-        const r = byKey.get(d.i);
-        if (r) {
-          if (r.visible) vis.add(d.i);
-          return { i: d.i, x: r.x, y: r.y, w: r.w, h: r.h };
-        }
-        vis.add(d.i);
-        return d;
+      const list = WIDGETS.map((w, i) => {
+        const r = byKey.get(w.key);
+        return {
+          key: w.key,
+          w: r?.w ?? w.w,
+          h: r?.h ?? w.h,
+          visible: r ? !!r.visible : true,
+          order: r?.x ?? i,
+        };
       });
-      setLayout(lay);
-      setVisible(vis);
+      list.sort((a, b2) => a.order - b2.order);
+      setItems(list.map(({ key, w, h, visible }) => ({ key, w, h, visible })));
       setReady(true);
     })();
     return () => {
@@ -68,34 +70,46 @@ export function Dashboard() {
     };
   }, [version]);
 
-  function onLayoutChange(next: Layout[]) {
-    setLayout((prev) => {
-      const map = new Map(prev.map((l) => [l.i, l]));
-      for (const n of next) map.set(n.i, n);
-      return [...map.values()];
-    });
-    for (const n of next) void saveLayoutItem(n.i, n.x, n.y, n.w, n.h, 1);
+  /** Guarda el orden, tamaño y visibilidad de todos los widgets. */
+  function persist(list: WState[]) {
+    list.forEach((it, idx) => void saveLayoutItem(it.key, idx, 0, it.w, it.h, it.visible ? 1 : 0));
   }
 
+  function commit(next: WState[]) {
+    setItems(next);
+    persist(next);
+  }
+
+  function onDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = items.findIndex((i) => i.key === active.id);
+    const newIndex = items.findIndex((i) => i.key === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    commit(arrayMove(items, oldIndex, newIndex));
+  }
+
+  function cycleWidth(key: string) {
+    commit(
+      items.map((it) =>
+        it.key === key ? { ...it, w: WIDTHS[(WIDTHS.indexOf(it.w) + 1) % WIDTHS.length] } : it,
+      ),
+    );
+  }
+  function bumpHeight(key: string, delta: number) {
+    commit(items.map((it) => (it.key === key ? { ...it, h: Math.max(3, it.h + delta) } : it)));
+  }
   function hide(key: string) {
-    setVisible((v) => {
-      const n = new Set(v);
-      n.delete(key);
-      return n;
-    });
-    void setWidgetVisible(key, 0);
+    commit(items.map((it) => (it.key === key ? { ...it, visible: false } : it)));
   }
-
   function show(key: string) {
-    setVisible((v) => new Set(v).add(key));
-    const l = layout.find((x) => x.i === key);
-    if (l) void saveLayoutItem(l.i, l.x, l.y, l.w, l.h, 1);
-    else void setWidgetVisible(key, 1);
+    const next = items.map((it) => (it.key === key ? { ...it, visible: true } : it));
+    setItems(next);
+    void setWidgetVisible(key, 1);
   }
-
   async function resetDash() {
     await resetLayout();
-    reload(); // recarga con la disposición por defecto
+    reload();
   }
 
   if (ready && !bounds) {
@@ -110,8 +124,9 @@ export function Dashboard() {
     );
   }
 
-  const visibleLayout = layout.filter((l) => visible.has(l.i));
-  const hidden = WIDGETS.filter((w) => !visible.has(w.key));
+  const visibleItems = items.filter((it) => it.visible);
+  const hidden = items.filter((it) => !it.visible);
+  const props: WidgetProps = { accountId, excludeInternal, from, to, version };
 
   return (
     <div>
@@ -119,25 +134,15 @@ export function Dashboard() {
         <h1>Dashboard</h1>
         <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
           <AccountSelector />
-          <DateRange
-            from={from}
-            to={to}
-            onFrom={setFrom}
-            onTo={setTo}
-            min={bounds?.min}
-            max={bounds?.max}
-          />
+          <DateRange from={from} to={to} onFrom={setFrom} onTo={setTo} min={bounds?.min} max={bounds?.max} />
           <ExcludeInternalToggle />
           {hidden.length > 0 && (
-            <select
-              value=""
-              onChange={(e) => e.target.value && show(e.target.value)}
-              title="Añadir widget"
-            >
+            <select value="" onChange={(e) => e.target.value && show(e.target.value)} title="Añadir widget">
               <option value="">+ Añadir widget</option>
-              {hidden.map((w) => (
-                <option key={w.key} value={w.key}>{w.title}</option>
-              ))}
+              {hidden.map((it) => {
+                const def = WIDGETS.find((w) => w.key === it.key);
+                return <option key={it.key} value={it.key}>{def?.title ?? it.key}</option>;
+              })}
             </select>
           )}
           <button onClick={() => void resetDash()} title="Volver a la disposición por defecto">
@@ -147,38 +152,94 @@ export function Dashboard() {
       </div>
 
       {ready && (
-        <Grid
-          className="layout"
-          layout={visibleLayout}
-          cols={12}
-          rowHeight={40}
-          draggableHandle=".widget-head"
-          onLayoutChange={onLayoutChange}
-          margin={[14, 14]}
-        >
-          {visibleLayout.map((l) => {
-            const def = WIDGETS.find((w) => w.key === l.i)!;
-            const Body = def.Body;
-            return (
-              <div key={l.i} className="card widget">
-                <div className="widget-head">
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>{def.title}</span>
-                  <button className="widget-hide" onClick={() => hide(l.i)} title="Ocultar">✕</button>
-                </div>
-                <div className="widget-body">
-                  <Body
-                    accountId={accountId}
-                    excludeInternal={excludeInternal}
-                    from={from}
-                    to={to}
-                    version={version}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </Grid>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={visibleItems.map((i) => i.key)} strategy={rectSortingStrategy}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(12, 1fr)",
+                gridAutoRows: "40px",
+                gap: 14,
+              }}
+            >
+              {visibleItems.map((it) => (
+                <SortableWidget
+                  key={it.key}
+                  item={it}
+                  props={props}
+                  onCycleWidth={() => cycleWidth(it.key)}
+                  onTaller={() => bumpHeight(it.key, 1)}
+                  onShorter={() => bumpHeight(it.key, -1)}
+                  onHide={() => hide(it.key)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
+    </div>
+  );
+}
+
+function SortableWidget({
+  item,
+  props,
+  onCycleWidth,
+  onTaller,
+  onShorter,
+  onHide,
+}: {
+  item: WState;
+  props: WidgetProps;
+  onCycleWidth: () => void;
+  onTaller: () => void;
+  onShorter: () => void;
+  onHide: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.key,
+  });
+  const def = WIDGETS.find((w) => w.key === item.key);
+  if (!def) return null;
+  const Body: FC<WidgetProps> = def.Body;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="card widget"
+      style={{
+        gridColumn: `span ${item.w}`,
+        gridRow: `span ${item.h}`,
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 100 : undefined,
+        opacity: isDragging ? 0.85 : 1,
+        boxShadow: isDragging ? "0 10px 28px rgba(0,0,0,0.45)" : undefined,
+      }}
+    >
+      <div className="widget-head">
+        <span className="row" style={{ gap: 6, fontWeight: 600, fontSize: 13, minWidth: 0 }}>
+          <span
+            className="grip"
+            title="Arrastra para mover"
+            style={{ cursor: "grab", touchAction: "none" }}
+            {...attributes}
+            {...listeners}
+          >
+            ⠿
+          </span>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.title}</span>
+        </span>
+        <span className="row" style={{ gap: 2 }}>
+          <button className="widget-hide" onClick={onShorter} title="Más bajo">▾</button>
+          <button className="widget-hide" onClick={onTaller} title="Más alto">▴</button>
+          <button className="widget-hide" onClick={onCycleWidth} title="Cambiar ancho">⇄</button>
+          <button className="widget-hide" onClick={onHide} title="Ocultar">✕</button>
+        </span>
+      </div>
+      <div className="widget-body">
+        <Body {...props} />
+      </div>
     </div>
   );
 }

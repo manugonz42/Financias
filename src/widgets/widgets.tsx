@@ -4,9 +4,11 @@ import { donutOption, barFlowsOption, lineOption, cashBarOption } from "../compo
 import { formatEUR, monthKey } from "../lib/format";
 import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
+import { listGoals } from "../data/goals";
+import { goalPercent } from "../lib/goals";
 import { donutSlices } from "../lib/donut";
 import { useApp } from "../state/AppContext";
-import type { TxFilters } from "../types";
+import type { Goal, TxFilters } from "../types";
 import type { MonthlyFlow, BalancePoint, CashPoint, Subscription, KpiSummary, NetWorthNow } from "../data/stats";
 
 export interface WidgetProps {
@@ -225,6 +227,35 @@ const SubscriptionsBody: FC<WidgetProps> = (p) => {
   );
 };
 
+const GoalsBody: FC<WidgetProps> = (p) => {
+  const [goals, setGoals] = useState<Goal[]>([]);
+  useEffect(() => {
+    void listGoals().then(setGoals);
+  }, [p.version]);
+  if (goals.length === 0)
+    return <span className="muted">Define metas en la pestaña «Metas».</span>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
+      {goals.map((g) => {
+        const pct = goalPercent(g.current_amount, g.target_amount);
+        const done = g.current_amount >= g.target_amount;
+        return (
+          <div key={g.id}>
+            <div className="row" style={{ fontSize: 13 }}>
+              <span>{g.icon} {g.name}</span>
+              <span className="spacer" />
+              <span className="muted">{formatEUR(g.current_amount)} / {formatEUR(g.target_amount)}</span>
+            </div>
+            <div className="bar">
+              <span style={{ width: `${pct}%`, background: done ? "var(--good)" : g.color }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 export interface WidgetDef {
   key: string;
   title: string;
@@ -240,6 +271,7 @@ export const WIDGETS: WidgetDef[] = [
   { key: "bars", title: "Gastos vs ingresos por mes", w: 8, h: 8, Body: MonthlyBarsBody },
   { key: "balance", title: "Evolución de saldo / patrimonio", w: 8, h: 8, Body: BalanceLineBody },
   { key: "budgets", title: "Presupuestos del mes", w: 4, h: 8, Body: BudgetsBody },
+  { key: "goals", title: "Metas de ahorro", w: 4, h: 7, Body: GoalsBody },
   { key: "cash", title: "Efectivo en cajero", w: 6, h: 7, Body: CashBody },
   { key: "subs", title: "Pagos recurrentes", w: 6, h: 7, Body: SubscriptionsBody },
 ];

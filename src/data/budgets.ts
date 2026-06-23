@@ -1,4 +1,5 @@
 import { query, exec } from "../db/database";
+import { EFFECTIVE_TX } from "./splits";
 
 export interface BudgetRow {
   category_id: number;
@@ -26,7 +27,7 @@ export async function listBudgets(month: string): Promise<BudgetRow[]> {
   return query<BudgetRow>(
     `SELECT b.category_id, c.name AS category_name, c.color, c.icon, b.amount,
             COALESCE((
-              SELECT SUM(ABS(t.importe)) FROM transactions t
+              SELECT SUM(t.amt) FROM ${EFFECTIVE_TX} t
               WHERE t.category_id = b.category_id
                 AND t.is_internal = 0 AND t.importe < 0
                 AND substr(t.fecha_operacion, 1, 7) = ?

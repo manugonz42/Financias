@@ -1,6 +1,7 @@
 import { query } from "../db/database";
 import { buildWhere } from "./filters";
 import { listAccounts, currentBalance } from "./accounts";
+import { EFFECTIVE_TX } from "./splits";
 import type { TxFilters } from "../types";
 
 export interface CategorySlice {
@@ -9,12 +10,13 @@ export interface CategorySlice {
   value: number;
 }
 
-/** Gasto por categoría (importes negativos, sin traspasos internos). */
+/** Gasto por categoría (importes negativos, sin traspasos internos). Considera
+ *  los movimientos divididos (cada parte cuenta en su categoría). */
 export async function spendByCategory(f: TxFilters): Promise<CategorySlice[]> {
   const { clause, params } = buildWhere({ ...f, flow: "expense" });
   return query<CategorySlice>(
-    `SELECT c.name AS name, c.color AS color, SUM(ABS(t.importe)) AS value
-     FROM transactions t
+    `SELECT c.name AS name, c.color AS color, SUM(t.amt) AS value
+     FROM ${EFFECTIVE_TX} t
      JOIN categories c ON c.id = t.category_id
      ${clause}
      GROUP BY c.id
@@ -36,8 +38,8 @@ export interface CategoryValue {
 export async function spendByCategoryId(f: TxFilters): Promise<CategoryValue[]> {
   const { clause, params } = buildWhere({ ...f, flow: "expense" });
   return query<CategoryValue>(
-    `SELECT t.category_id AS id, SUM(ABS(t.importe)) AS value
-     FROM transactions t
+    `SELECT t.category_id AS id, SUM(t.amt) AS value
+     FROM ${EFFECTIVE_TX} t
      ${clause} AND t.category_id IS NOT NULL
      GROUP BY t.category_id`,
     params,

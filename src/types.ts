@@ -75,6 +75,29 @@ export interface Transaction {
   card_last4: string | null;
   is_internal: number;
   source_file: string | null;
+  /** Nº de partes si el movimiento está dividido en varias categorías (0 = no). */
+  split_count: number;
+}
+
+/** Una parte de un movimiento dividido (importe = magnitud positiva). */
+export interface TransactionSplit {
+  id: number;
+  transaction_id: number;
+  category_id: number;
+  amount: number;
+  note: string | null;
+}
+
+/** Meta de ahorro. */
+export interface Goal {
+  id: number;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  target_date: string | null;
+  color: string;
+  icon: string;
+  created_at: string;
 }
 
 /** Filtros aplicables a la consulta de movimientos. */

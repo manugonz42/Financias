@@ -73,9 +73,34 @@ export const SCHEMA: string[] = [
      amount REAL NOT NULL                -- presupuesto mensual recurrente
    )`,
 
+  // División de un movimiento en varias categorías. Si un movimiento tiene
+  // partes, su categoría propia se ignora en las agregaciones por categoría y
+  // se usan estas partes (cuyos importes, magnitudes, suman el total).
+  `CREATE TABLE IF NOT EXISTS transaction_splits (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     transaction_id INTEGER NOT NULL REFERENCES transactions(id),
+     category_id INTEGER NOT NULL REFERENCES categories(id),
+     amount REAL NOT NULL,               -- magnitud (positiva)
+     note TEXT
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_splits_tx ON transaction_splits(transaction_id)`,
+
   `CREATE TABLE IF NOT EXISTS settings (
      key TEXT PRIMARY KEY,
      value TEXT
+   )`,
+
+  // Metas de ahorro: objetivo y progreso (aportaciones manuales).
+  `CREATE TABLE IF NOT EXISTS goals (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL,
+     target_amount REAL NOT NULL,
+     current_amount REAL NOT NULL DEFAULT 0,
+     target_date TEXT,                   -- 'YYYY-MM-DD' (opcional)
+     color TEXT NOT NULL DEFAULT '#6366f1',
+     icon TEXT NOT NULL DEFAULT '🎯',
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
    )`,
 
   `CREATE TABLE IF NOT EXISTS dashboard_layout (

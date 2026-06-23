@@ -3,6 +3,7 @@ import { useApp } from "../state/AppContext";
 import { AccountSelector, MonthSelect, ExcludeInternalToggle } from "../components/Controls";
 import { listTransactions, sumFlows, distinctMonths, distinctSubtypes } from "../data/transactions";
 import { reassignCategoryByElement } from "../data/categories";
+import { SplitEditor } from "../components/SplitEditor";
 import { exportTransactionsCSV } from "../lib/csv";
 import { formatEUR, formatDate } from "../lib/format";
 import type { Transaction, TxFilters } from "../types";
@@ -32,6 +33,7 @@ export function Movimientos() {
   const [totals, setTotals] = useState({ expense: 0, income: 0 });
   const [loading, setLoading] = useState(false);
   const [note, setNote] = useState("");
+  const [splitting, setSplitting] = useState<Transaction | null>(null);
 
   useEffect(() => {
     void distinctMonths().then(setMonths);
@@ -141,15 +143,35 @@ export function Movimientos() {
                   {t.is_internal === 1 && <span className="tag-internal"> · interno</span>}
                 </td>
                 <td>
-                  <select
-                    value={t.category_id ?? ""}
-                    onChange={(e) => changeCategory(t.id, Number(e.target.value))}
-                    style={{ maxWidth: 170, padding: "4px 6px", fontSize: 12 }}
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                    ))}
-                  </select>
+                  {t.split_count > 0 ? (
+                    <button
+                      className="link-btn"
+                      onClick={() => setSplitting(t)}
+                      title="Editar la división"
+                      style={{ fontSize: 12 }}
+                    >
+                      ✂ Dividido ({t.split_count})
+                    </button>
+                  ) : (
+                    <div className="row" style={{ gap: 4 }}>
+                      <select
+                        value={t.category_id ?? ""}
+                        onChange={(e) => changeCategory(t.id, Number(e.target.value))}
+                        style={{ maxWidth: 150, padding: "4px 6px", fontSize: 12 }}
+                      >
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        className="link-btn"
+                        onClick={() => setSplitting(t)}
+                        title="Dividir en varias categorías"
+                      >
+                        ✂
+                      </button>
+                    </div>
+                  )}
                 </td>
                 <td className="muted">{SUBTYPE_LABEL[t.subtype ?? ""] ?? t.subtype}</td>
                 <td className={`right amount ${t.importe < 0 ? "neg" : "pos"}`}>{formatEUR(t.importe)}</td>
@@ -162,6 +184,14 @@ export function Movimientos() {
           </tbody>
         </table>
       </div>
+
+      {splitting && (
+        <SplitEditor
+          tx={splitting}
+          onClose={() => setSplitting(null)}
+          onSaved={reload}
+        />
+      )}
     </div>
   );
 }
