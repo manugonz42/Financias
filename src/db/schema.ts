@@ -97,6 +97,26 @@ export const SCHEMA: string[] = [
 
   `CREATE INDEX IF NOT EXISTS idx_ritems_tx ON receipt_items(transaction_id)`,
 
+  // Aprendizaje: categoría recordada por producto (descripción normalizada).
+  // Igual idea que category_rules pero para las líneas de recibo.
+  `CREATE TABLE IF NOT EXISTS item_rules (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     pattern TEXT NOT NULL UNIQUE,        -- descripción normalizada del producto
+     category_id INTEGER NOT NULL REFERENCES categories(id)
+   )`,
+
+  // Tickets importados que aún no se han emparejado con un movimiento
+  // (p. ej. porque no se han importado todavía). Cola "en espera".
+  `CREATE TABLE IF NOT EXISTS pending_receipts (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     path TEXT NOT NULL,
+     ticket_date TEXT,                    -- 'YYYY-MM-DD' detectada
+     total REAL,                          -- total detectado
+     text TEXT,                           -- texto OCR (para palabras clave)
+     items_json TEXT,                     -- desglose detectado (JSON)
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   )`,
+
   `CREATE TABLE IF NOT EXISTS settings (
      key TEXT PRIMARY KEY,
      value TEXT

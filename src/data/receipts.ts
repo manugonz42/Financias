@@ -1,5 +1,27 @@
 import { query, exec } from "../db/database";
+import { normalize } from "../lib/text";
 import type { ReceiptItem } from "../types";
+
+/** Recuerda la categoría asignada a un producto para la próxima vez. */
+export async function learnItemCategory(description: string, categoryId: number): Promise<void> {
+  const pattern = normalize(description);
+  if (!pattern) return;
+  await exec(
+    "INSERT INTO item_rules (pattern, category_id) VALUES (?, ?) ON CONFLICT(pattern) DO UPDATE SET category_id = excluded.category_id",
+    [pattern, categoryId],
+  );
+}
+
+/** Categoría aprendida para un producto (o null si no se conoce). */
+export async function suggestItemCategory(description: string): Promise<number | null> {
+  const pattern = normalize(description);
+  if (!pattern) return null;
+  const row = (await query<{ category_id: number }>(
+    "SELECT category_id FROM item_rules WHERE pattern = ?",
+    [pattern],
+  ))[0];
+  return row?.category_id ?? null;
+}
 
 export async function setReceiptPath(txId: number, path: string | null): Promise<void> {
   await exec("UPDATE transactions SET receipt_path = ? WHERE id = ?", [path, txId]);
@@ -24,6 +46,8 @@ export async function setReceiptItems(
       "INSERT INTO receipt_items (transaction_id, description, amount, category_id) VALUES (?, ?, ?, ?)",
       [txId, it.description.trim(), Math.abs(it.amount), it.category_id ?? null],
     );
+    // Aprende la categoría del producto para autoasignarla la próxima vez.
+    if (it.category_id != null) await learnItemCategory(it.description, it.category_id);
   }
 }
 
