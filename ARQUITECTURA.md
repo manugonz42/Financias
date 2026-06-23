@@ -64,12 +64,17 @@ npm test               # tests del parser
 > aplicaciones y navegador* (es un interruptor de un solo sentido; decisión de seguridad
 > del usuario). En **macOS no aplica**.
 
-### 2.2. Futuro — CI con GitHub Actions (cuando estemos en Mac)
+### 2.2. CI con GitHub Actions — **activado** (`.github/workflows/build.yml`)
 
-> ⚠️ **Aún NO activado.** Cuando queramos builds automáticos de los dos instaladores
-> sin depender de cada máquina, crear `.github/workflows/build.yml` con esto.
-> GitHub levanta un runner macOS (Apple Silicon → `.dmg` arm64) y otro Windows
-> (→ `.msi`) en paralelo y adjunta los instaladores. Gratis en repos públicos.
+> ✅ **Creado.** GitHub levanta un runner macOS (Apple Silicon → `.dmg` arm64) y otro
+> Windows (→ `.msi`) en paralelo, compila y adjunta los instaladores a una Release.
+> Gratis en repos públicos. Disparo por **tag** (`git tag v0.1.0 && git push origin v0.1.0`)
+> o a mano (Actions → build → *Run workflow*). El workflow real es el de abajo; añade
+> `permissions: contents: write` (para crear la Release) y caché de Rust.
+>
+> **Nota:** el build de macOS compila sin el OCR nativo (el comando `ocr_image` solo está
+> implementado en Windows; en Mac devuelve un aviso). El OCR de macOS (Apple Vision) es un
+> paso pendiente que conviene implementar y probar en el propio Mac.
 
 ```yaml
 name: build

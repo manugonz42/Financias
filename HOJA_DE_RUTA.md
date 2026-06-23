@@ -48,8 +48,10 @@ Leyenda: ✅ hecho · 🔄 en curso · ⏳ pendiente · 💡 idea/backlog
 
 - ✅ Build nativo **Windows**: `.msi`, instalador NSIS `-setup.exe` y `financias.exe`
   portable (generados en `src-tauri/target/release/`).
-- ⏳ Build nativo **macOS** (Apple Silicon → `.dmg`/`.app`): pendiente de hacerlo en el Mac
-  (Tauri no cross-compila Mac↔Windows).
+- ✅ **CI con GitHub Actions** (`.github/workflows/build.yml`): al etiquetar `v*` compila
+  `.msi` (Windows) y `.dmg` arm64 (macOS) en paralelo y los adjunta a una Release.
+- ⏳ Build nativo **macOS** verificado en el Mac (M4) + **OCR de Apple Vision** (el de Windows
+  ya está; falta el equivalente macOS).
 - ⏳ Documentar en README la instalación del instalador para el usuario final.
 
 ---
@@ -57,8 +59,7 @@ Leyenda: ✅ hecho · 🔄 en curso · ⏳ pendiente · 💡 idea/backlog
 ## Próximos pasos / pendiente
 
 - ⏳ **Módulo de Inversiones** (hueco preparado en `views/Inversiones.tsx`, sin implementar).
-- ⏳ **CI con GitHub Actions** para compilar `.dmg` + `.msi` automáticamente al etiquetar
-  una versión (workflow ya documentado en `ARQUITECTURA.md`, aún no activado).
+- ⏳ **OCR de macOS** (Apple Vision) — el de Windows ya está; implementar y probar en el Mac.
 - ⏳ Pruebas en macOS (M4) y ajuste de rendimiento/empaquetado.
 
 ---
