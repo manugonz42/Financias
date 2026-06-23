@@ -79,6 +79,19 @@ export interface Transaction {
   split_count: number;
   /** 1 = el usuario lo ha marcado como revisado/conciliado. */
   reconciled: number;
+  /** Ruta del archivo de recibo adjunto (o null). */
+  receipt_path: string | null;
+  /** Nº de líneas de desglose del recibo. */
+  item_count: number;
+}
+
+/** Una línea del desglose de un recibo (producto + importe). */
+export interface ReceiptItem {
+  id: number;
+  transaction_id: number;
+  description: string;
+  amount: number;
+  category_id: number | null;
 }
 
 /** Una parte de un movimiento dividido (importe = magnitud positiva). */

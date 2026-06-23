@@ -70,6 +70,10 @@ async function migrate(db: Database): Promise<void> {
   if (!txCols.some((c) => c.name === "reconciled")) {
     await db.execute("ALTER TABLE transactions ADD COLUMN reconciled INTEGER NOT NULL DEFAULT 0");
   }
+  // receipt_path en transactions: ruta del recibo adjunto.
+  if (!txCols.some((c) => c.name === "receipt_path")) {
+    await db.execute("ALTER TABLE transactions ADD COLUMN receipt_path TEXT");
+  }
 }
 
 /** Helper de selección tipada. */

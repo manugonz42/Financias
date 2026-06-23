@@ -4,6 +4,7 @@ import { AccountSelector, MonthSelect, ExcludeInternalToggle } from "../componen
 import { listTransactions, sumFlows, distinctMonths, distinctSubtypes, setReconciled, setReconciledBulk } from "../data/transactions";
 import { reassignCategoryByElement } from "../data/categories";
 import { SplitEditor } from "../components/SplitEditor";
+import { ReceiptEditor } from "../components/ReceiptEditor";
 import { exportTransactionsCSV } from "../lib/csv";
 import { formatEUR, formatDate } from "../lib/format";
 import type { Transaction, TxFilters } from "../types";
@@ -35,6 +36,7 @@ export function Movimientos() {
   const [loading, setLoading] = useState(false);
   const [note, setNote] = useState("");
   const [splitting, setSplitting] = useState<Transaction | null>(null);
+  const [receipting, setReceipting] = useState<Transaction | null>(null);
 
   useEffect(() => {
     void distinctMonths().then(setMonths);
@@ -181,35 +183,38 @@ export function Movimientos() {
                   {t.is_internal === 1 && <span className="tag-internal"> · interno</span>}
                 </td>
                 <td>
-                  {t.split_count > 0 ? (
-                    <button
-                      className="link-btn"
-                      onClick={() => setSplitting(t)}
-                      title="Editar la división"
-                      style={{ fontSize: 12 }}
-                    >
-                      ✂ Dividido ({t.split_count})
-                    </button>
-                  ) : (
-                    <div className="row" style={{ gap: 4 }}>
-                      <select
-                        value={t.category_id ?? ""}
-                        onChange={(e) => changeCategory(t.id, Number(e.target.value))}
-                        style={{ maxWidth: 150, padding: "4px 6px", fontSize: 12 }}
-                      >
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                        ))}
-                      </select>
+                  <div className="row" style={{ gap: 4 }}>
+                    {t.split_count > 0 ? (
                       <button
                         className="link-btn"
                         onClick={() => setSplitting(t)}
-                        title="Dividir en varias categorías"
+                        title="Editar la división"
+                        style={{ fontSize: 12 }}
                       >
-                        ✂
+                        ✂ Dividido ({t.split_count})
                       </button>
-                    </div>
-                  )}
+                    ) : (
+                      <>
+                        <select
+                          value={t.category_id ?? ""}
+                          onChange={(e) => changeCategory(t.id, Number(e.target.value))}
+                          style={{ maxWidth: 150, padding: "4px 6px", fontSize: 12 }}
+                        >
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                          ))}
+                        </select>
+                        <button className="link-btn" onClick={() => setSplitting(t)} title="Dividir en varias categorías">✂</button>
+                      </>
+                    )}
+                    <button
+                      className="link-btn"
+                      onClick={() => setReceipting(t)}
+                      title="Recibo y desglose por líneas"
+                    >
+                      📎{t.receipt_path || t.item_count > 0 ? "•" : ""}
+                    </button>
+                  </div>
                 </td>
                 <td className="muted">{SUBTYPE_LABEL[t.subtype ?? ""] ?? t.subtype}</td>
                 <td className={`right amount ${t.importe < 0 ? "neg" : "pos"}`}>{formatEUR(t.importe)}</td>
@@ -227,6 +232,14 @@ export function Movimientos() {
         <SplitEditor
           tx={splitting}
           onClose={() => setSplitting(null)}
+          onSaved={reload}
+        />
+      )}
+
+      {receipting && (
+        <ReceiptEditor
+          tx={receipting}
+          onClose={() => setReceipting(null)}
           onSaved={reload}
         />
       )}

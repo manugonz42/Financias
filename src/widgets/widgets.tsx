@@ -7,6 +7,7 @@ import { listBudgets, type BudgetRow } from "../data/budgets";
 import { listGoals } from "../data/goals";
 import { goalPercent } from "../lib/goals";
 import { listScheduled, type ScheduledRow } from "../data/scheduled";
+import { topReceiptItems, type ItemAggregate } from "../data/receipts";
 import { daysUntil } from "../lib/schedule";
 import { donutSlices } from "../lib/donut";
 import { useApp } from "../state/AppContext";
@@ -287,6 +288,32 @@ const UpcomingBody: FC<WidgetProps> = (p) => {
   );
 };
 
+const ReceiptItemsBody: FC<WidgetProps> = (p) => {
+  const [rows, setRows] = useState<ItemAggregate[]>([]);
+  useEffect(() => {
+    void topReceiptItems(12).then(setRows);
+  }, [p.version]);
+  if (rows.length === 0)
+    return <span className="muted">Desglosa recibos (📎 en Movimientos) para ver en qué se va el dinero.</span>;
+  const max = rows[0]?.total || 1;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, overflowY: "auto" }}>
+      {rows.map((r) => (
+        <div key={r.description}>
+          <div className="row" style={{ fontSize: 13 }}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{r.description}</span>
+            <span className="spacer" />
+            <span className="muted">{formatEUR(r.total)}{r.n > 1 ? ` · ${r.n}×` : ""}</span>
+          </div>
+          <div className="bar">
+            <span style={{ width: `${(r.total / max) * 100}%`, background: "var(--accent)" }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export interface WidgetDef {
   key: string;
   title: string;
@@ -304,6 +331,7 @@ export const WIDGETS: WidgetDef[] = [
   { key: "budgets", title: "Presupuestos del mes", w: 4, h: 8, Body: BudgetsBody },
   { key: "goals", title: "Metas de ahorro", w: 4, h: 7, Body: GoalsBody },
   { key: "upcoming", title: "Próximos pagos", w: 4, h: 7, Body: UpcomingBody },
+  { key: "items", title: "En qué se gasta (recibos)", w: 4, h: 7, Body: ReceiptItemsBody },
   { key: "cash", title: "Efectivo en cajero", w: 6, h: 7, Body: CashBody },
   { key: "subs", title: "Pagos recurrentes", w: 6, h: 7, Body: SubscriptionsBody },
 ];

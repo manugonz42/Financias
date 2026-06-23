@@ -86,6 +86,17 @@ export const SCHEMA: string[] = [
 
   `CREATE INDEX IF NOT EXISTS idx_splits_tx ON transaction_splits(transaction_id)`,
 
+  // Desglose por líneas de un recibo (productos del ticket dentro de un gasto).
+  `CREATE TABLE IF NOT EXISTS receipt_items (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     transaction_id INTEGER NOT NULL REFERENCES transactions(id),
+     description TEXT NOT NULL,
+     amount REAL NOT NULL,               -- magnitud (positiva)
+     category_id INTEGER REFERENCES categories(id)
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_ritems_tx ON receipt_items(transaction_id)`,
+
   `CREATE TABLE IF NOT EXISTS settings (
      key TEXT PRIMARY KEY,
      value TEXT
