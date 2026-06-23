@@ -61,6 +61,47 @@ Leyenda: ✅ hecho · 🔄 en curso · ⏳ pendiente · 💡 idea/backlog
   una versión (workflow ya documentado en `ARQUITECTURA.md`, aún no activado).
 - ⏳ Pruebas en macOS (M4) y ajuste de rendimiento/empaquetado.
 
+---
+
+## Fase 6 — Paridad con la competencia ⏳
+
+Huecos detectados frente a las apps top de escritorio/local (Firefly III, Actual Budget,
+GnuCash; ref. YNAB/Monarch). Orden recomendado por impacto: las primeras se apoyan entre sí
+y desbloquean el patrimonio neto, el mayor diferenciador.
+
+- ✅ **Categorías jerárquicas editables** — árbol de profundidad libre (`parent_id`), CRUD
+  desde Ajustes (crear/editar/mover/borrar). Asignación de movimientos a cualquier nivel.
+  `subtype` se mantiene como dimensión independiente "tipo de movimiento".
+  *Pendiente de seguimiento:* roll-up de subcategorías en gráficos/presupuestos y drill-down
+  del donut (se apoyan en `subtreeIds`).
+
+1. ⏳ **Cuentas manuales** — crear cuentas que no vienen de un PDF (efectivo, otro banco,
+   broker, hipoteca). Hoy todo depende de importar extracto.
+2. ⏳ **Patrimonio neto (net worth) en el tiempo** — activos − pasivos, con gráfico de
+   evolución. *Feature nº1 de todas las top.*
+3. ⏳ **Tipos de cuenta activo/pasivo** — modelar tarjetas de crédito, préstamos y deudas,
+   no solo cuentas de flujo. Necesario para que el patrimonio neto sea real.
+4. ⏳ **Split de transacciones** — dividir un movimiento en varias categorías
+   (ej. ticket de súper = comida + droguería + ocio).
+5. ⏳ **Metas de ahorro (goals)** — fijar objetivo (p. ej. "3.000 € vacaciones") y ver progreso.
+6. ⏳ **Reconciliación** — cuadrar contra el saldo del extracto y marcar movimientos conciliados.
+7. ⏳ **Transacciones programadas / próximos pagos** — calendario de pagos futuros y recurrentes
+   previstos (proyectar a futuro las suscripciones que ya se detectan).
+8. ⏳ **Adjuntar recibos** a un movimiento.
+9. ⏳ **Rollover de presupuesto** (estilo envelope: lo no gastado pasa al mes siguiente).
+
+## Fase 7 — UI / UX ⏳
+
+- ⏳ **Sistema de diseño coherente + modo oscuro** — tokens de color/espaciado y tipografía
+  consistentes.
+- ⏳ **Estados vacíos con acción** — en vez de tablas/gráficos vacíos, un CTA
+  ("Importa tu primer extracto").
+- ⏳ **Drill-down de categoría** — clic en una porción del donut → desglose de esa categoría.
+- ⏳ **Densidad y jerarquía en la tabla de movimientos** — iconos de categoría, color por signo,
+  agrupar por fecha.
+
+> Descartados de momento (2026-06-23): onboarding guiado y paleta de comandos (Cmd/Ctrl+K).
+
 ## Ideas / backlog 💡
 
 - 💡 Previsión de gastos del mes en curso según ritmo de gasto.
@@ -69,6 +110,7 @@ Leyenda: ✅ hecho · 🔄 en curso · ⏳ pendiente · 💡 idea/backlog
 - 💡 Etiquetas libres además de categorías.
 - 💡 Reglas de categorización editables desde la propia app (UI).
 - 💡 Copia de seguridad / exportar-importar la base de datos.
+- 💡 Multi-divisa (Firefly la tiene; útil si se amplía el alcance).
 
 ---
 
