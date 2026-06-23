@@ -53,6 +53,10 @@ export function buildWhere(f: TxFilters): { clause: string; params: unknown[] } 
   } else if (f.flow === "income") {
     c.push("t.importe > 0 AND t.is_internal = 0");
   }
+  if (f.reconciled != null) {
+    c.push("t.reconciled = ?");
+    p.push(f.reconciled ? 1 : 0);
+  }
 
   return { clause: c.length ? "WHERE " + c.join(" AND ") : "", params: p };
 }

@@ -77,6 +77,8 @@ export interface Transaction {
   source_file: string | null;
   /** Nº de partes si el movimiento está dividido en varias categorías (0 = no). */
   split_count: number;
+  /** 1 = el usuario lo ha marcado como revisado/conciliado. */
+  reconciled: number;
 }
 
 /** Una parte de un movimiento dividido (importe = magnitud positiva). */
@@ -116,6 +118,8 @@ export interface TxFilters {
   excludeInternal?: boolean;
   /** 'expense' = solo gastos, 'income' = solo ingresos. */
   flow?: "expense" | "income";
+  /** Filtrar por estado de conciliación (true = conciliados, false = pendientes). */
+  reconciled?: boolean;
 }
 
 export interface ImportResult {

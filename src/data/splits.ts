@@ -13,12 +13,12 @@ import type { TransactionSplit } from "../types";
  */
 export const EFFECTIVE_TX = `(
   SELECT account_id, fecha_operacion, fecha_valor, concepto, merchant, subtype,
-         importe, is_internal, category_id, ABS(importe) AS amt
+         importe, is_internal, reconciled, category_id, ABS(importe) AS amt
     FROM transactions
    WHERE id NOT IN (SELECT transaction_id FROM transaction_splits)
   UNION ALL
   SELECT t.account_id, t.fecha_operacion, t.fecha_valor, t.concepto, t.merchant, t.subtype,
-         t.importe, t.is_internal, s.category_id, s.amount AS amt
+         t.importe, t.is_internal, t.reconciled, s.category_id, s.amount AS amt
     FROM transactions t
     JOIN transaction_splits s ON s.transaction_id = t.id
 )`;

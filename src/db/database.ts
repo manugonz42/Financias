@@ -47,6 +47,14 @@ async function migrate(db: Database): Promise<void> {
   if (!accCols.some((c) => c.name === "class")) {
     await db.execute("ALTER TABLE accounts ADD COLUMN class TEXT NOT NULL DEFAULT 'activo'");
   }
+
+  // reconciled en transactions: marcar movimientos como revisados/conciliados.
+  const txCols = (await db.select(
+    "PRAGMA table_info(transactions)",
+  )) as Array<{ name: string }>;
+  if (!txCols.some((c) => c.name === "reconciled")) {
+    await db.execute("ALTER TABLE transactions ADD COLUMN reconciled INTEGER NOT NULL DEFAULT 0");
+  }
 }
 
 /** Helper de selección tipada. */

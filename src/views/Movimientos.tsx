@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { AccountSelector, MonthSelect, ExcludeInternalToggle } from "../components/Controls";
-import { listTransactions, sumFlows, distinctMonths, distinctSubtypes } from "../data/transactions";
+import { listTransactions, sumFlows, distinctMonths, distinctSubtypes, setReconciled, setReconciledBulk } from "../data/transactions";
 import { reassignCategoryByElement } from "../data/categories";
 import { SplitEditor } from "../components/SplitEditor";
 import { exportTransactionsCSV } from "../lib/csv";
@@ -29,6 +29,7 @@ export function Movimientos() {
   const [subtype, setSubtype] = useState("");
   const [search, setSearch] = useState("");
   const [flow, setFlow] = useState<"" | "expense" | "income">("");
+  const [recon, setRecon] = useState<"" | "yes" | "no">("");
   const [rows, setRows] = useState<Transaction[]>([]);
   const [totals, setTotals] = useState({ expense: 0, income: 0 });
   const [loading, setLoading] = useState(false);
@@ -49,8 +50,9 @@ export function Movimientos() {
       subtype: subtype || undefined,
       search: search || undefined,
       flow: flow || undefined,
+      reconciled: recon === "yes" ? true : recon === "no" ? false : undefined,
     }),
-    [accountId, excludeInternal, month, categoryId, subtype, search, flow],
+    [accountId, excludeInternal, month, categoryId, subtype, search, flow, recon],
   );
 
   useEffect(() => {
@@ -73,6 +75,18 @@ export function Movimientos() {
     setNote(n > 1 ? `Actualizados ${n} movimientos con el mismo concepto.` : "");
     reload();
   }
+
+  async function toggleReconciled(txId: number, value: boolean) {
+    await setReconciled(txId, value);
+    setRows((prev) => prev.map((r) => (r.id === txId ? { ...r, reconciled: value ? 1 : 0 } : r)));
+  }
+
+  async function reconcileAll(value: boolean) {
+    await setReconciledBulk(rows.map((r) => r.id), value);
+    setRows((prev) => prev.map((r) => ({ ...r, reconciled: value ? 1 : 0 })));
+  }
+
+  const reconciledCount = rows.filter((r) => r.reconciled === 1).length;
 
   return (
     <div>
@@ -103,6 +117,11 @@ export function Movimientos() {
           <option value="expense">Solo gastos</option>
           <option value="income">Solo ingresos</option>
         </select>
+        <select value={recon} onChange={(e) => setRecon(e.target.value as "" | "yes" | "no")} title="Estado de conciliación">
+          <option value="">Conciliados y pendientes</option>
+          <option value="yes">Solo conciliados</option>
+          <option value="no">Solo pendientes</option>
+        </select>
         <input
           className="grow"
           placeholder="Buscar concepto o comercio…"
@@ -116,6 +135,15 @@ export function Movimientos() {
         <span className="muted">Gastos: <b className="amount neg">{formatEUR(totals.expense)}</b></span>
         <span className="muted">Ingresos: <b className="amount pos">{formatEUR(totals.income)}</b></span>
         <span className="muted">Neto: <b className={totals.income - totals.expense >= 0 ? "amount pos" : "amount neg"}>{formatEUR(totals.income - totals.expense)}</b></span>
+        <span className="muted">Conciliados: <b style={{ color: "var(--text)" }}>{reconciledCount}/{rows.length}</b></span>
+        {rows.length > 0 && (
+          <button
+            className="link-btn"
+            onClick={() => void reconcileAll(reconciledCount < rows.length)}
+          >
+            {reconciledCount < rows.length ? "Conciliar todos" : "Desmarcar todos"}
+          </button>
+        )}
         {note && <span className="spacer" />}
         {note && <span style={{ color: "var(--accent)", fontSize: 13 }}>{note}</span>}
       </div>
@@ -124,6 +152,7 @@ export function Movimientos() {
         <table>
           <thead>
             <tr>
+              <th title="Conciliado / revisado">✓</th>
               <th>Fecha</th>
               <th>Cuenta</th>
               <th>Concepto</th>
@@ -135,7 +164,16 @@ export function Movimientos() {
           </thead>
           <tbody>
             {rows.map((t) => (
-              <tr key={t.id}>
+              <tr key={t.id} style={{ opacity: t.reconciled === 1 ? 0.6 : 1 }}>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={t.reconciled === 1}
+                    onChange={(e) => void toggleReconciled(t.id, e.target.checked)}
+                    title={t.reconciled === 1 ? "Conciliado" : "Marcar como conciliado"}
+                    style={{ width: 16, height: 16 }}
+                  />
+                </td>
                 <td>{formatDate(t.fecha_operacion)}</td>
                 <td className="muted">{t.account_name}</td>
                 <td className="concepto">
@@ -179,7 +217,7 @@ export function Movimientos() {
               </tr>
             ))}
             {rows.length === 0 && !loading && (
-              <tr><td colSpan={7} className="muted" style={{ textAlign: "center", padding: 30 }}>Sin movimientos para estos filtros.</td></tr>
+              <tr><td colSpan={8} className="muted" style={{ textAlign: "center", padding: 30 }}>Sin movimientos para estos filtros.</td></tr>
             )}
           </tbody>
         </table>

@@ -1,4 +1,4 @@
-import { query } from "../db/database";
+import { query, exec } from "../db/database";
 import { buildWhere } from "./filters";
 import type { Transaction, TxFilters } from "../types";
 
@@ -7,7 +7,7 @@ const SELECT = `
          t.fecha_operacion, t.fecha_valor, t.concepto, t.importe, t.saldo,
          t.category_id, c.name AS category_name, c.color AS category_color,
          c.kind AS category_kind, t.subtype, t.merchant, t.card_last4,
-         t.is_internal, t.source_file,
+         t.is_internal, t.source_file, t.reconciled,
          (SELECT COUNT(*) FROM transaction_splits s WHERE s.transaction_id = t.id) AS split_count
   FROM transactions t
   JOIN accounts a ON a.id = t.account_id
@@ -64,6 +64,20 @@ export async function dateBounds(): Promise<{ min: string; max: string } | null>
   ))[0];
   if (!row?.min || !row?.max) return null;
   return { min: row.min, max: row.max };
+}
+
+/** Marca/desmarca un movimiento como conciliado (revisado). */
+export async function setReconciled(txId: number, value: boolean): Promise<void> {
+  await exec("UPDATE transactions SET reconciled = ? WHERE id = ?", [value ? 1 : 0, txId]);
+}
+
+/** Marca/desmarca en bloque (p. ej. todos los filtrados). */
+export async function setReconciledBulk(ids: number[], value: boolean): Promise<void> {
+  if (ids.length === 0) return;
+  await exec(
+    `UPDATE transactions SET reconciled = ? WHERE id IN (${ids.map(() => "?").join(",")})`,
+    [value ? 1 : 0, ...ids],
+  );
 }
 
 /** Subtipos presentes (para el filtro por tipo de movimiento). */
