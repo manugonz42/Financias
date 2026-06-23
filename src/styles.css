@@ -166,6 +166,17 @@ tr.date-group:hover td { background: var(--bg-soft); }
 .link-btn { background: none; border: none; padding: 0 2px; color: var(--accent); cursor: pointer; font-size: 12px; }
 .link-btn:hover { background: none; text-decoration: underline; }
 
+/* Estado vacío */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: 6px; padding: 48px 24px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.empty-state .empty-icon { font-size: 40px; line-height: 1; margin-bottom: 4px; opacity: 0.9; }
+.empty-state .empty-title { font-size: 15px; font-weight: 600; margin: 0; }
+.empty-state .empty-hint { font-size: 13px; margin: 0; max-width: 420px; }
+.empty-state .empty-action { margin-top: 10px; }
+
 /* Modal */
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 50;

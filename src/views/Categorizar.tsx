@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useApp } from "../state/AppContext";
 import { listUncategorized, assignGroup, type UncatGroup } from "../data/review";
 import { addRuleForKey } from "../data/rules";
+import { EmptyState } from "../components/EmptyState";
 import { formatEUR, formatDate } from "../lib/format";
 
 export function Categorizar() {
@@ -63,10 +64,12 @@ export function Categorizar() {
       {loading && <div className="card"><span className="muted">Cargando…</span></div>}
 
       {!loading && total === 0 && (
-        <div className="card">
-          <p>🎉 No hay nada sin clasificar. Todos los gastos tienen categoría.</p>
-          <Link to="/movimientos"><button>Ver movimientos</button></Link>
-        </div>
+        <EmptyState
+          icon="🎉"
+          title="No hay nada sin clasificar"
+          hint="Todos los gastos tienen categoría. Cuando importes nuevos extractos, lo que no se categorice solo aparecerá aquí."
+          action={<Link to="/movimientos"><button className="primary">Ver movimientos</button></Link>}
+        />
       )}
 
       {done && total > 0 && (

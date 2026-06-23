@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { IconPicker } from "../components/IconPicker";
+import { EmptyState } from "../components/EmptyState";
 import { listGoals, createGoal, updateGoal, deleteGoal, addContribution } from "../data/goals";
 import { goalPercent, monthlyTarget } from "../lib/goals";
 import { formatEUR, formatDate } from "../lib/format";
@@ -34,7 +35,12 @@ export function Metas() {
       )}
 
       {goals.length === 0 && !adding && (
-        <div className="card"><span className="muted">Aún no hay metas. Crea una para empezar a ahorrar con un objetivo.</span></div>
+        <EmptyState
+          icon="🐷"
+          title="Aún no tienes metas de ahorro"
+          hint="Fija un objetivo (p. ej. 3.000 € para vacaciones) y ve registrando tus aportaciones para seguir el progreso."
+          action={<button className="primary" onClick={() => setAdding(true)}>+ Crear mi primera meta</button>}
+        />
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>

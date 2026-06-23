@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { listScheduled, createScheduled, updateScheduled, deleteScheduled, markPaid, type ScheduledRow } from "../data/scheduled";
 import { FREQ_LABEL, daysUntil } from "../lib/schedule";
+import { EmptyState } from "../components/EmptyState";
 import { formatEUR, formatDate } from "../lib/format";
 import type { Frequency } from "../types";
 
@@ -46,7 +47,12 @@ export function Programados() {
       )}
 
       {rows.length === 0 && !adding && (
-        <div className="card"><span className="muted">No hay pagos programados.</span></div>
+        <EmptyState
+          icon="📅"
+          title="No hay pagos programados"
+          hint="Registra tus recibos y suscripciones recurrentes (alquiler, Netflix, seguros…) para ver los próximos pagos y cuánto falta para cada uno."
+          action={<button className="primary" onClick={() => setAdding(true)}>+ Programar un pago</button>}
+        />
       )}
 
       {rows.length > 0 && (

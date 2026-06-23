@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useApp } from "../state/AppContext";
 import { MonthSelect } from "../components/Controls";
+import { EmptyState } from "../components/EmptyState";
 import { distinctMonths } from "../data/transactions";
 import { spendByCategory } from "../data/stats";
 import { setBudget, deleteBudget, budgetCarryovers } from "../data/budgets";
@@ -16,6 +18,7 @@ export function Presupuestos() {
   const [budgets, setBudgets] = useState<Map<number, number>>(new Map());
   const [carryovers, setCarryovers] = useState<Map<number, number>>(new Map());
   const [rollover, setRollover] = useState(false);
+  const [ready, setReady] = useState(false);
 
   const expenseCats = useMemo(() => categories.filter((c) => c.kind === "gasto"), [categories]);
 
@@ -23,6 +26,7 @@ export function Presupuestos() {
     void distinctMonths().then((ms) => {
       setMonths(ms);
       setMonth((cur) => cur || ms[0] || "");
+      setReady(true);
     });
     void getBudgetRollover().then(setRollover);
   }, [version]);
@@ -64,6 +68,20 @@ export function Presupuestos() {
 
   const totalBudget = [...budgets.values()].reduce((s, v) => s + v, 0);
   const totalSpent = expenseCats.reduce((s, c) => s + (spent.get(c.name) ?? 0), 0);
+
+  if (ready && months.length === 0) {
+    return (
+      <div>
+        <div className="topbar"><h1>Presupuestos</h1></div>
+        <EmptyState
+          icon="🎯"
+          title="Aún no hay movimientos"
+          hint="Importa tus extractos para poner límites de gasto por categoría y seguir tu progreso cada mes."
+          action={<Link to="/importar"><button className="primary">Importar un extracto</button></Link>}
+        />
+      </div>
+    );
+  }
 
   return (
     <div>

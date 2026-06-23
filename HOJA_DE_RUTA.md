@@ -115,8 +115,8 @@ categoría. Botón «↻ Refrescar» en el dashboard.
 
 - ✅ **Modo claro/oscuro** — interruptor en la barra lateral; los gráficos leen las variables CSS
   del tema. (Sistema de diseño coherente: refinamiento continuo.)
-- 🔄 **Estados vacíos con acción** — hecho en Movimientos; pendiente en Categorizar, Metas,
-  Programados, Presupuestos, Inversiones.
+- ✅ **Estados vacíos con acción** — componente `EmptyState` (icono + mensaje + CTA) en
+  Movimientos, Categorizar, Metas, Programados, Presupuestos e Inversiones.
 - ✅ **Drill-down de categoría** — clic en una porción del donut → desglose de sus subcategorías.
 - ✅ **Densidad y jerarquía en la tabla de movimientos** — badge de categoría con color, color por
   signo, agrupación por fecha (con toggle) y orden por fecha/importe.
