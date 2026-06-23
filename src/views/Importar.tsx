@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { useApp } from "../state/AppContext";
 import { importStatementFromBytes } from "../import/importStatement";
+import { TicketImport } from "../components/TicketImport";
 import type { ImportResult } from "../types";
 
 export function Importar() {
@@ -76,6 +77,9 @@ export function Importar() {
           )}
         </div>
       )}
+
+      <div className="topbar" style={{ marginTop: 28 }}><h1>Importar tickets</h1></div>
+      <TicketImport />
     </div>
   );
 }
