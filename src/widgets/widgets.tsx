@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type FC } from "react";
-import { EChart } from "../components/charts/EChart";
-import { donutOption, barFlowsOption, lineOption, cashBarOption } from "../components/charts/options";
+import { NivoDonut, NivoFlows, NivoBalance, NivoCash } from "../components/charts/nivo";
 import { formatEUR, monthKey } from "../lib/format";
 import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
@@ -83,14 +82,7 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
   if (valueById.size === 0)
     return <span className="muted">Sin gastos en el periodo seleccionado.</span>;
 
-  const onEvents = {
-    click: (e: any) => {
-      const id = e?.data?.id;
-      if (id == null) return;
-      const slice = slices.find((s) => s.id === id);
-      if (slice?.drillable) setStack((s) => [...s, id]);
-    },
-  };
+  const onSlice = (id: number) => setStack((s) => [...s, id]);
 
   const centerLabel = parentId != null ? byId.get(parentId)?.name : undefined;
 
@@ -116,7 +108,7 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
         )}
       </div>
       <div className="widget-body">
-        <EChart option={donutOption(slices, centerLabel)} onEvents={onEvents} />
+        <NivoDonut slices={slices} centerLabel={centerLabel} onSlice={onSlice} />
       </div>
     </div>
   );
@@ -146,7 +138,7 @@ const MonthlyBarsBody: FC<WidgetProps> = (p) => {
     void monthlyFlows(scope(p)).then(setData);
   }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
-  return <EChart option={barFlowsOption(data)} />;
+  return <NivoFlows rows={data} />;
 };
 
 const BalanceLineBody: FC<WidgetProps> = (p) => {
@@ -157,7 +149,7 @@ const BalanceLineBody: FC<WidgetProps> = (p) => {
   }, [p.accountId, p.version]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
   const name = p.accountId === "all" ? "Patrimonio neto" : "Saldo";
-  return <EChart option={lineOption(data, name)} />;
+  return <NivoBalance points={data} name={name} />;
 };
 
 const CashBody: FC<WidgetProps> = (p) => {
@@ -170,7 +162,7 @@ const CashBody: FC<WidgetProps> = (p) => {
   return (
     <div className="widget" style={{ gap: 6 }}>
       <div className="muted">Total retirado: <b style={{ color: "var(--text)" }}>{formatEUR(total)}</b></div>
-      <div className="widget-body"><EChart option={cashBarOption(data)} /></div>
+      <div className="widget-body"><NivoCash rows={data} /></div>
     </div>
   );
 };
