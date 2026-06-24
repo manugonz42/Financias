@@ -61,6 +61,22 @@ npm run tauri build
 > Tauri **no** compila de Mac a Windows ni viceversa: genera cada binario en su
 > propio sistema operativo (o mediante CI, p.ej. GitHub Actions).
 
+## 💾 Instalar (Windows)
+
+La Release adjunta dos instaladores. **Usa el `-setup.exe`:**
+
+- **`Financias_X.Y.Z_x64-setup.exe`** (NSIS) — **recomendado**. Instala por usuario
+  (sin permisos de administrador) en `%LOCALAPPDATA%\Financias\`, ofrece una casilla
+  para **crear acceso directo en el escritorio** y **se autoactualiza** solo.
+- `Financias_X.Y.Z_x64_en-US.msi` (WiX) — instalación por máquina (pide admin) en
+  `C:\Program Files\Financias\`. No ofrece acceso directo en el escritorio.
+
+> ⚠️ La versión **portable** (ejecutar el `.exe` suelto sin instalar) **no se
+> autoactualiza**: el aviso "🚀 Versión disponible" aparecerá, pero al pulsar
+> *Actualizar* dará error porque el updater necesita una instalación que reemplazar.
+> Para tener auto-update, instala con el `-setup.exe`. Tus datos viven en
+> `%APPDATA%\com.manugonz.financias` y se conservan en cualquier caso.
+
 ## ✅ Tests
 
 ```bash
