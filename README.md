@@ -56,29 +56,29 @@ npm run tauri build
 ```
 
 - En **macOS** genera `.app` / `.dmg` (en un Mac con Apple Silicon, binario arm64 nativo).
-- En **Windows** genera `.exe` / `.msi`.
+- En **Windows** genera el instalador **NSIS** `-setup.exe`.
 
-Los instaladores quedan en (sustituye `X.Y.Z` por la versión):
+El instalador queda en (sustituye `X.Y.Z` por la versión):
 
 ```
-src-tauri/target/release/bundle/nsis/Financias_X.Y.Z_x64-setup.exe   # recomendado
-src-tauri/target/release/bundle/msi/Financias_X.Y.Z_x64_en-US.msi
+src-tauri/target/release/bundle/nsis/Financias_X.Y.Z_x64-setup.exe
 ```
+
+> En Windows se genera **solo NSIS** (no `.msi`) a propósito: con auto-update conviene
+> un único tipo de instalador, porque si conviven `.msi` y NSIS el updater puede coger
+> el `.msi` (instalación por máquina, pide admin) y fallar al actualizar.
 
 > Tauri **no** compila de Mac a Windows ni viceversa: genera cada binario en su
 > propio sistema operativo (o mediante CI, p.ej. GitHub Actions).
 
 ## 💾 Instalar (Windows)
 
-Descarga el instalador de la [última Release](https://github.com/manugonz42/Financias/releases/latest)
-(o, si compilas en local, lo encuentras en `src-tauri/target/release/bundle/`).
-Hay dos. **Usa el `-setup.exe`:**
+Descarga `Financias_X.Y.Z_x64-setup.exe` de la
+[última Release](https://github.com/manugonz42/Financias/releases/latest)
+(o, si compilas en local, lo encuentras en `src-tauri/target/release/bundle/nsis/`).
 
-- **`Financias_X.Y.Z_x64-setup.exe`** (NSIS) — **recomendado**. Instala por usuario
-  (sin permisos de administrador) en `%LOCALAPPDATA%\Financias\`, ofrece una casilla
-  para **crear acceso directo en el escritorio** y **se autoactualiza** solo.
-- `Financias_X.Y.Z_x64_en-US.msi` (WiX) — instalación por máquina (pide admin) en
-  `C:\Program Files\Financias\`. No ofrece acceso directo en el escritorio.
+Instala **por usuario** (sin permisos de administrador) en `%LOCALAPPDATA%\Financias\`,
+ofrece una casilla para **crear acceso directo en el escritorio** y **se autoactualiza** solo.
 
 > ⚠️ La versión **portable** (ejecutar el `.exe` suelto sin instalar) **no se
 > autoactualiza**: el aviso "🚀 Versión disponible" aparecerá, pero al pulsar
