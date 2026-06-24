@@ -1,6 +1,22 @@
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/** Icono calendario (líneas, color del tema vía currentColor). */
+function CalendarIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 2v4" />
+      <path d="M16 2v4" />
+      <rect width="18" height="18" x="3" y="4" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M8 14h.01" />
+      <path d="M12 14h.01" />
+      <path d="M16 14h.01" />
+      <path d="M8 18h.01" />
+      <path d="M12 18h.01" />
+    </svg>
+  );
+}
 
 /** Resta `months` meses a una fecha ISO ('YYYY-MM-DD') y devuelve ISO. */
 function shift(anchor: string, months: number): string {
@@ -51,11 +67,11 @@ export function DateRangeMenu({
         onClick={() => setOpen((o) => !o)}
         title="Rango de fechas"
         className={cn(
-          "flex size-7 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+          "flex size-7 items-center justify-center rounded-md bg-transparent text-foreground/80 transition-colors hover:bg-accent hover:text-foreground",
           open && "bg-accent text-foreground",
         )}
       >
-        <CalendarDays className="size-4" />
+        <CalendarIcon />
       </button>
       {open && (
         <div className="absolute right-0 top-8 z-50 w-56 rounded-lg border border-border bg-card p-3 shadow-xl">

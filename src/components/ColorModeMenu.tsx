@@ -1,8 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import { Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SWATCHES = ["#6366f1", "#22c55e", "#0ea5e9", "#f59e0b", "#ef4444", "#a855f7", "#ec4899", "#14b8a6"];
+
+/** Icono paleta de pintor (líneas, color del tema vía currentColor). */
+function PaletteIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
+      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+    </svg>
+  );
+}
 
 /**
  * Selector del modo de color del rosco: un iconito de paleta (plano,
@@ -35,11 +47,11 @@ export function ColorModeMenu({
         onClick={() => setOpen((o) => !o)}
         title="Colores del rosco"
         className={cn(
-          "flex size-7 items-center justify-center rounded-md bg-transparent text-foreground/70 transition-colors hover:bg-accent hover:text-foreground",
+          "flex size-7 items-center justify-center rounded-md bg-transparent text-foreground/80 transition-colors hover:bg-accent hover:text-foreground",
           open && "bg-accent text-foreground",
         )}
       >
-        <Palette className="size-4" />
+        <PaletteIcon />
       </button>
       {open && (
         <div className="absolute right-0 top-8 z-50 w-48 rounded-lg border border-border bg-card p-3 shadow-xl">
