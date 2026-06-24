@@ -242,6 +242,21 @@ export function NivoFlows({ rows }: { rows: MonthlyFlow[] }) {
 
 /* ------------------------------------------------- Línea: saldo/patrimonio */
 
+// Capa personalizada: dibuja la curva con trazo en degradado (url) y un glow sutil.
+const GlowLine = ({ series, lineGenerator }: any) =>
+  series.map((s: any) => (
+    <path
+      key={s.id}
+      d={lineGenerator(s.data.map((d: any) => d.position))}
+      fill="none"
+      stroke="url(#lineGradient)"
+      strokeWidth={3.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ filter: "drop-shadow(0 2px 7px rgba(99,102,241,0.5))" }}
+    />
+  ));
+
 export function NivoBalance({ points, name }: { points: BalancePoint[]; name: string }) {
   const theme = useNivoTheme();
   const color = cssVar("--accent", "#6366f1");
@@ -267,12 +282,24 @@ export function NivoBalance({ points, name }: { points: BalancePoint[]; name: st
         areaOpacity={1}
         defs={[
           linearGradientDef("balanceArea", [
-            { offset: 0, color: "inherit", opacity: 0.45 },
-            { offset: 100, color: "inherit", opacity: 0 },
+            { offset: 0, color: "#a855f7", opacity: 0.4 },
+            { offset: 60, color: "#6366f1", opacity: 0.18 },
+            { offset: 100, color: "#22d3ee", opacity: 0 },
           ]),
+          linearGradientDef(
+            "lineGradient",
+            [
+              { offset: 0, color: "#22d3ee" },
+              { offset: 50, color: "#6366f1" },
+              { offset: 100, color: "#a855f7" },
+            ],
+            { x1: "0", y1: "0", x2: "1", y2: "0" },
+          ),
         ]}
         fill={[{ match: "*", id: "balanceArea" }]}
+        layers={["grid", "markers", "axes", "areas", "crosshair", GlowLine, "points", "slices", "mesh", "legends"]}
         enableGridX={false}
+        enableGridY={false}
         enableSlices="x"
         crosshairType="x"
         axisBottom={{ tickSize: 0, tickPadding: 8 }}
