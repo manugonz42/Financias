@@ -256,25 +256,37 @@ export function NivoBalance({ points, name }: { points: BalancePoint[]; name: st
       <ResponsiveLine
         data={data}
         theme={theme}
-        margin={{ top: 20, right: 20, bottom: 28, left: 56 }}
+        margin={{ top: 24, right: 24, bottom: 28, left: 56 }}
         xScale={{ type: "point" }}
         yScale={{ type: "linear", min: "auto", max: "auto" }}
         curve="monotoneX"
         colors={[color]}
-        lineWidth={2.5}
+        lineWidth={3}
         enablePoints={false}
         enableArea
-        areaOpacity={0.12}
+        areaOpacity={1}
+        defs={[
+          linearGradientDef("balanceArea", [
+            { offset: 0, color: "inherit", opacity: 0.45 },
+            { offset: 100, color: "inherit", opacity: 0 },
+          ]),
+        ]}
+        fill={[{ match: "*", id: "balanceArea" }]}
         enableGridX={false}
-        useMesh
+        enableSlices="x"
+        crosshairType="x"
         axisBottom={{ tickSize: 0, tickPadding: 8 }}
         axisLeft={{ tickSize: 0, tickPadding: 6, format: (v) => `${Math.round(Number(v))}` }}
         motionConfig="gentle"
-        tooltip={({ point }) => (
-          <Tip>
-            {String(point.data.x)} · <b>{formatEUR(Number(point.data.y))}</b>
-          </Tip>
-        )}
+        sliceTooltip={({ slice }) => {
+          const pt = slice.points[0];
+          return (
+            <Tip>
+              <Swatch color={color} />
+              {String(pt.data.x)} · <b>{formatEUR(Number(pt.data.y))}</b>
+            </Tip>
+          );
+        }}
       />
     </Fill>
   );
