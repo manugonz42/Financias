@@ -276,6 +276,19 @@ tr.date-group:hover td { background: var(--bg-soft); }
   transition: none !important;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
+/* "Sombra" de destino: dónde y con qué tamaño caerá el widget que arrastras */
+.react-grid-item.react-grid-placeholder {
+  background: var(--accent) !important;
+  opacity: 0.18;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius);
+  transition-duration: 120ms;
+  z-index: 2;
+}
+/* Animación suave del reflujo del resto de widgets */
+.react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
 /* Tirador de redimensionar visible (la esquina inferior derecha) */
 .react-grid-item > .react-resizable-handle {
   position: absolute; right: 0; bottom: 0; width: 18px; height: 18px;

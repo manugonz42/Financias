@@ -4,6 +4,8 @@
 @layer theme, base, legacy, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
+@import "react-grid-layout/css/styles.css" layer(legacy);
+@import "react-resizable/css/styles.css" layer(legacy);
 @import "./styles.css" layer(legacy);
 @import "tw-animate-css";
 
