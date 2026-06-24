@@ -9,6 +9,14 @@
 @import "./styles.css" layer(legacy);
 @import "tw-animate-css";
 
+/* Sin preflight de Tailwind: restauramos solo el box-sizing global (lo más
+   importante) para que las utilidades de tamaño (size-*, w-*, p-*) cuadren. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 /* Modo oscuro enganchado al atributo data-theme que usa la app (default: oscuro). */
 @custom-variant dark (&:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *));
 

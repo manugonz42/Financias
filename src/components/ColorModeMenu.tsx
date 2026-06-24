@@ -6,7 +6,7 @@ const SWATCHES = ["#6366f1", "#22c55e", "#0ea5e9", "#f59e0b", "#ef4444", "#a855f
 /** Icono paleta de pintor (líneas, color del tema vía currentColor). */
 function PaletteIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
       <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
       <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
@@ -47,7 +47,7 @@ export function ColorModeMenu({
         onClick={() => setOpen((o) => !o)}
         title="Colores del rosco"
         className={cn(
-          "flex size-7 items-center justify-center rounded-md bg-transparent text-foreground/80 transition-colors hover:bg-accent hover:text-foreground",
+          "flex size-7 items-center justify-center rounded-md border-0 bg-transparent p-0 text-foreground/80 transition-colors hover:bg-accent hover:text-foreground",
           open && "bg-accent text-foreground",
         )}
       >
@@ -79,7 +79,7 @@ export function ColorModeMenu({
                 title={c}
                 style={{ background: c }}
                 className={cn(
-                  "size-7 rounded-full transition-transform hover:scale-110",
+                  "size-7 rounded-full border-0 p-0 transition-transform hover:scale-110",
                   value === c && "ring-2 ring-foreground ring-offset-2 ring-offset-card",
                 )}
               />

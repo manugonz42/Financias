@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 /** Icono calendario (líneas, color del tema vía currentColor). */
 function CalendarIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <path d="M8 2v4" />
       <path d="M16 2v4" />
       <rect width="18" height="18" x="3" y="4" rx="2" />
@@ -67,7 +67,7 @@ export function DateRangeMenu({
         onClick={() => setOpen((o) => !o)}
         title="Rango de fechas"
         className={cn(
-          "flex size-7 items-center justify-center rounded-md bg-transparent text-foreground/80 transition-colors hover:bg-accent hover:text-foreground",
+          "flex size-7 items-center justify-center rounded-md border-0 bg-transparent p-0 text-foreground/80 transition-colors hover:bg-accent hover:text-foreground",
           open && "bg-accent text-foreground",
         )}
       >
