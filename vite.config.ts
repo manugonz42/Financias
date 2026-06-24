@@ -10,6 +10,21 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
   plugins: [react(), tailwindcss()],
 
+  // react-draggable (motor de arrastre/resize de react-grid-layout) hace
+  // `if (process.env.DRAGGABLE_DEBUG)`; en el navegador `process` no existe y
+  // lanza ReferenceError al iniciar el drag. Lo definimos para dev (pre-bundle)
+  // y producción (build).
+  define: {
+    "process.env.DRAGGABLE_DEBUG": "false",
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        "process.env.DRAGGABLE_DEBUG": "false",
+      },
+    },
+  },
+
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
