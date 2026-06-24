@@ -4,11 +4,21 @@ import type Database from "@tauri-apps/plugin-sql";
 import { CATEGORIES, RULES } from "../rules/categoryRules";
 
 export async function seed(db: Database): Promise<void> {
-  // Categorías (INSERT OR IGNORE por nombre único).
+  // Categorías sembradas: respetar borrados (lápidas) y renombres (seed_key).
   for (const c of CATEGORIES) {
+    const tomb = (await db.select(
+      "SELECT 1 AS x FROM deleted_seed_categories WHERE key = ? LIMIT 1",
+      [c.name],
+    )) as Array<{ x: number }>;
+    if (tomb.length) continue;
+    const existing = (await db.select(
+      "SELECT 1 AS x FROM categories WHERE seed_key = ? LIMIT 1",
+      [c.name],
+    )) as Array<{ x: number }>;
+    if (existing.length) continue;
     await db.execute(
-      "INSERT OR IGNORE INTO categories (name, kind, color, icon) VALUES (?, ?, ?, ?)",
-      [c.name, c.kind, c.color, c.icon],
+      "INSERT OR IGNORE INTO categories (name, kind, color, icon, seed_key) VALUES (?, ?, ?, ?, ?)",
+      [c.name, c.kind, c.color, c.icon, c.name],
     );
   }
 

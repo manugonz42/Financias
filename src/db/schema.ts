@@ -31,7 +31,14 @@ export const SCHEMA: string[] = [
      kind TEXT NOT NULL,                 -- 'gasto' | 'ingreso' | 'interno'
      color TEXT NOT NULL DEFAULT '#9ca3af',
      icon TEXT NOT NULL DEFAULT '•',
-     parent_id INTEGER REFERENCES categories(id)   -- NULL = categoría raíz
+     parent_id INTEGER REFERENCES categories(id),  -- NULL = categoría raíz
+     seed_key TEXT                       -- nombre original de la semilla (NULL si la creó el usuario)
+   )`,
+
+  // Lápidas de categorías sembradas que el usuario ha borrado, para que la
+  // semilla no las resucite en el próximo arranque.
+  `CREATE TABLE IF NOT EXISTS deleted_seed_categories (
+     key TEXT PRIMARY KEY
    )`,
 
   `CREATE TABLE IF NOT EXISTS category_rules (

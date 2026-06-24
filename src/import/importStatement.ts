@@ -4,6 +4,7 @@
 import { extractPages } from "./loadPdf";
 import { parseOpenbankStatement } from "./openbankParser";
 import { parseUnicajaStatement, isUnicajaStatement } from "./unicajaParser";
+import { parseBbvaStatement, isBbvaStatement } from "./bbvaParser";
 import { categorize, compileRules } from "./categorize";
 import { loadRules } from "../data/rules";
 import { upsertAccount } from "../data/accounts";
@@ -25,15 +26,17 @@ export async function importStatementFromBytes(
 ): Promise<ImportResult> {
   const pages = await extractPages(bytes);
 
-  // Detección de banco: Unicaja u Openbank (por defecto).
+  // Detección de banco: BBVA, Unicaja u Openbank (por defecto).
   const fullText = pages.map((p) => p.map((t) => t.str).join(" ")).join(" ");
-  const { account, transactions, warnings } = isUnicajaStatement(fullText)
-    ? parseUnicajaStatement(pages)
-    : parseOpenbankStatement(pages);
+  const { account, transactions, warnings } = isBbvaStatement(fullText)
+    ? parseBbvaStatement(pages)
+    : isUnicajaStatement(fullText)
+      ? parseUnicajaStatement(pages)
+      : parseOpenbankStatement(pages);
 
   if (!account.number) {
     throw new Error(
-      "No se reconoció la cabecera de la cuenta. ¿Es un extracto de movimientos de Openbank o Unicaja?",
+      "No se reconoció la cabecera de la cuenta. ¿Es un extracto de movimientos de Openbank, Unicaja o BBVA?",
     );
   }
 

@@ -154,8 +154,8 @@ export async function moveCategory(
  * Traspaso interno), de modo que nada queda sin categoría.
  */
 export async function deleteCategory(id: number): Promise<void> {
-  const cat = (await query<{ parent_id: number | null; kind: Category["kind"] }>(
-    "SELECT parent_id, kind FROM categories WHERE id = ?",
+  const cat = (await query<{ parent_id: number | null; kind: Category["kind"]; seed_key: string | null }>(
+    "SELECT parent_id, kind, seed_key FROM categories WHERE id = ?",
     [id],
   ))[0];
   if (!cat) return;
@@ -182,6 +182,12 @@ export async function deleteCategory(id: number): Promise<void> {
   await exec("UPDATE scheduled_payments SET category_id = NULL WHERE category_id = ?", [id]);
   await exec("DELETE FROM budgets WHERE category_id = ?", [id]);
   await exec("DELETE FROM categories WHERE id = ?", [id]);
+  if (cat.seed_key) {
+    await exec(
+      "INSERT OR IGNORE INTO deleted_seed_categories (key) VALUES (?)",
+      [cat.seed_key],
+    );
+  }
 }
 
 export async function categoryByName(name: string): Promise<Category | undefined> {
