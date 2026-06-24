@@ -250,10 +250,10 @@ const GlowLine = ({ series, lineGenerator }: any) =>
       d={lineGenerator(s.data.map((d: any) => d.position))}
       fill="none"
       stroke="url(#lineGradient)"
-      strokeWidth={3.5}
+      strokeWidth={2.25}
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ filter: "drop-shadow(0 2px 7px rgba(99,102,241,0.5))" }}
+      style={{ filter: "drop-shadow(0 1px 5px rgba(99,102,241,0.45))" }}
     />
   ));
 

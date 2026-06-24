@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FC } from "react";
 import { NivoDonut, NivoFlows, NivoBalance, NivoCash, NivoCalendar, NivoSunburst, NivoBudgets, NivoGoals } from "../components/charts/nivo";
+import { DateRangeMenu } from "../components/DateRangeMenu";
 import { formatEUR, monthKey } from "../lib/format";
 import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions, dailySpend } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
@@ -63,13 +64,17 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
   const [valueById, setValueById] = useState<Map<number, number>>(new Map());
   // Pila de drill-down: ids de categorías padre por las que se ha ido entrando.
   const [stack, setStack] = useState<number[]>([]);
+  // Rango de fechas propio del widget (sobrescribe el global si se usa).
+  const [range, setRange] = useState<{ from: string; to: string } | null>(null);
+  const from = range?.from ?? p.from;
+  const to = range?.to ?? p.to;
 
   useEffect(() => {
-    void spendByCategoryId(scope(p)).then((rows) => {
+    void spendByCategoryId(scope({ ...p, from, to })).then((rows) => {
       setValueById(new Map(rows.map((r) => [r.id, r.value])));
       setStack([]); // al cambiar filtros/datos, vuelve a la vista de padres
     });
-  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  }, [p.accountId, from, to, p.excludeInternal, p.version]);
 
   const parentId = stack.length ? stack[stack.length - 1] : null;
   const slices = useMemo(
@@ -105,6 +110,8 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
             <button className="link-btn" onClick={() => setStack((s) => s.slice(0, -1))}>← Volver</button>
           </>
         )}
+        <span className="spacer" />
+        <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => setRange({ from: f, to: t })} />
       </div>
       <div className="widget-body">
         <NivoDonut slices={slices} centerLabel={centerLabel} onSlice={onSlice} />
@@ -142,13 +149,29 @@ const MonthlyBarsBody: FC<WidgetProps> = (p) => {
 
 const BalanceLineBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<BalancePoint[]>([]);
+  const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   useEffect(() => {
     if (p.accountId === "all") void netWorthSeries().then(setData);
     else void accountBalanceSeries(p.accountId).then(setData);
   }, [p.accountId, p.version]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
+  const from = range?.from ?? p.from;
+  const to = range?.to ?? p.to;
+  const fM = from.slice(0, 7);
+  const tM = to.slice(0, 7);
+  const points = data.filter((pt) => pt.month >= fM && pt.month <= tM);
   const name = p.accountId === "all" ? "Patrimonio neto" : "Saldo";
-  return <NivoBalance points={data} name={name} />;
+  return (
+    <div className="widget" style={{ gap: 6 }}>
+      <div className="row" style={{ minHeight: 20 }}>
+        <span className="spacer" />
+        <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => setRange({ from: f, to: t })} />
+      </div>
+      <div className="widget-body">
+        <NivoBalance points={points} name={name} />
+      </div>
+    </div>
+  );
 };
 
 const CashBody: FC<WidgetProps> = (p) => {
