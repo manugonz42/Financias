@@ -15,6 +15,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Link } from "react-router-dom";
+import { RefreshCw, RotateCcw, GripVertical, ChevronUp, ChevronDown, MoveHorizontal, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { useApp } from "../state/AppContext";
 import { AccountSelector, DateRange, ExcludeInternalToggle } from "../components/Controls";
 import { WIDGETS, type WidgetProps } from "../widgets/widgets";
@@ -115,10 +118,14 @@ export function Dashboard() {
   if (ready && !bounds) {
     return (
       <div>
-        <div className="topbar"><h1>Dashboard</h1></div>
-        <div className="import-box">
-          <p>Aún no hay movimientos.</p>
-          <Link to="/importar"><button className="primary">Importar un extracto PDF</button></Link>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-[22px] font-bold text-foreground">Dashboard</h1>
+        </div>
+        <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border p-10 text-center">
+          <p className="text-muted-foreground">Aún no hay movimientos.</p>
+          <Button asChild>
+            <Link to="/importar">Importar un extracto PDF</Link>
+          </Button>
         </div>
       </div>
     );
@@ -130,9 +137,9 @@ export function Dashboard() {
 
   return (
     <div>
-      <div className="topbar">
-        <h1>Dashboard</h1>
-        <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-[22px] font-bold text-foreground">Dashboard</h1>
+        <div className="flex flex-wrap items-center gap-2.5">
           <AccountSelector />
           <DateRange from={from} to={to} onFrom={setFrom} onTo={setTo} min={bounds?.min} max={bounds?.max} />
           <ExcludeInternalToggle />
@@ -145,12 +152,12 @@ export function Dashboard() {
               })}
             </select>
           )}
-          <button onClick={() => reload()} title="Recalcular los widgets con los datos actuales">
-            ↻ Refrescar
-          </button>
-          <button onClick={() => void resetDash()} title="Volver a la disposición por defecto">
-            Restablecer disposición
-          </button>
+          <Button variant="outline" size="sm" onClick={() => reload()} title="Recalcular los widgets con los datos actuales">
+            <RefreshCw /> Refrescar
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => void resetDash()} title="Volver a la disposición por defecto">
+            <RotateCcw /> Restablecer
+          </Button>
         </div>
       </div>
 
@@ -158,12 +165,8 @@ export function Dashboard() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={visibleItems.map((i) => i.key)} strategy={rectSortingStrategy}>
             <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(12, 1fr)",
-                gridAutoRows: "40px",
-                gap: 14,
-              }}
+              className="grid grid-cols-12 gap-3.5"
+              style={{ gridAutoRows: "40px" }}
             >
               {visibleItems.map((it) => (
                 <SortableWidget
@@ -209,38 +212,38 @@ function SortableWidget({
   return (
     <div
       ref={setNodeRef}
-      className="card widget"
+      className={cn(
+        "group flex h-full flex-col rounded-xl border border-border bg-card p-4",
+        isDragging && "z-[100] opacity-85 shadow-2xl",
+      )}
       style={{
         gridColumn: `span ${item.w}`,
         gridRow: `span ${item.h}`,
         transform: CSS.Transform.toString(transform),
         transition,
-        zIndex: isDragging ? 100 : undefined,
-        opacity: isDragging ? 0.85 : 1,
-        boxShadow: isDragging ? "0 10px 28px rgba(0,0,0,0.45)" : undefined,
       }}
     >
-      <div className="widget-head">
-        <span className="row" style={{ gap: 6, fontWeight: 600, fontSize: 13, minWidth: 0 }}>
+      <div className="mb-2 flex select-none items-center justify-between">
+        <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-foreground">
           <span
-            className="grip"
+            className="cursor-grab text-muted-foreground group-hover:text-primary"
             title="Arrastra para mover"
-            style={{ cursor: "grab", touchAction: "none" }}
+            style={{ touchAction: "none" }}
             {...attributes}
             {...listeners}
           >
-            ⠿
+            <GripVertical className="size-4" />
           </span>
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.title}</span>
+          <span className="truncate">{def.title}</span>
         </span>
-        <span className="row" style={{ gap: 2 }}>
-          <button className="widget-hide" onClick={onShorter} title="Más bajo">▾</button>
-          <button className="widget-hide" onClick={onTaller} title="Más alto">▴</button>
-          <button className="widget-hide" onClick={onCycleWidth} title="Cambiar ancho">⇄</button>
-          <button className="widget-hide" onClick={onHide} title="Ocultar">✕</button>
+        <span className="flex items-center gap-0.5">
+          <Button variant="ghost" size="icon-xs" onClick={onShorter} title="Más bajo"><ChevronDown /></Button>
+          <Button variant="ghost" size="icon-xs" onClick={onTaller} title="Más alto"><ChevronUp /></Button>
+          <Button variant="ghost" size="icon-xs" onClick={onCycleWidth} title="Cambiar ancho"><MoveHorizontal /></Button>
+          <Button variant="ghost" size="icon-xs" onClick={onHide} title="Ocultar"><X /></Button>
         </span>
       </div>
-      <div className="widget-body">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <Body {...props} />
       </div>
     </div>
