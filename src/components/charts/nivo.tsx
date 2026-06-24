@@ -74,6 +74,17 @@ function Fill({ children }: { children: React.ReactNode }) {
   return <div style={{ height: "100%", width: "100%" }}>{children}</div>;
 }
 
+/** Mezcla un color hex hacia el blanco (t=0 → color, t=1 → blanco). */
+function lighten(hex: string, t: number): string {
+  const m = hex.replace("#", "");
+  const n = m.length === 3 ? m.split("").map((c) => c + c).join("") : m;
+  const r = parseInt(n.slice(0, 2), 16);
+  const g = parseInt(n.slice(2, 4), 16);
+  const b = parseInt(n.slice(4, 6), 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * t);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
+
 function Swatch({ color }: { color: string }) {
   return (
     <span
@@ -97,22 +108,26 @@ export function NivoDonut({
   slices,
   centerLabel,
   onSlice,
+  gradientColor,
 }: {
   slices: DonutSlice[];
   centerLabel?: string;
   onSlice?: (id: number) => void;
+  gradientColor?: string | null;
 }) {
   const theme = useNivoTheme();
   const text = cssVar("--text", "#e2e8f0");
   const card = cssVar("--bg-card", "#1e293b");
   const total = slices.reduce((s, x) => s + x.value, 0) || 1;
+  const n = slices.length;
 
-  const data: PieDatum[] = slices.map((s) => ({
+  const data: PieDatum[] = slices.map((s, i) => ({
     id: String(s.id),
     catId: s.id,
     label: s.name,
     value: +s.value.toFixed(2),
-    color: s.color,
+    // Con color base: degradado monocromo (mayor porción = más intenso).
+    color: gradientColor ? lighten(gradientColor, n > 1 ? (i / (n - 1)) * 0.62 : 0) : s.color,
     drillable: s.drillable,
   }));
 

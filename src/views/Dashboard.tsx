@@ -5,7 +5,7 @@ import { RefreshCw, RotateCcw, GripVertical, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "../state/AppContext";
 import { AccountSelector, DateRange, ExcludeInternalToggle } from "../components/Controls";
-import { WIDGETS, type WidgetProps } from "../widgets/widgets";
+import { WIDGETS, type WidgetProps, type WidgetDef } from "../widgets/widgets";
 import { dateBounds } from "../data/transactions";
 import { loadLayout, saveLayoutItem, setWidgetVisible, resetLayout } from "../data/dashboard";
 
@@ -188,34 +188,56 @@ export function Dashboard() {
           {visibleItems.map((it) => {
             const def = WIDGETS.find((w) => w.key === it.key);
             if (!def) return <div key={it.key} />;
-            const Body: FC<WidgetProps> = def.Body;
             return (
               <div
                 key={it.key}
                 className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-4"
               >
-                <div className="mb-2 flex select-none items-center justify-between">
-                  <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-foreground">
-                    <span
-                      className="widget-grip cursor-grab text-muted-foreground group-hover:text-primary"
-                      title="Arrastra para mover"
-                    >
-                      <GripVertical className="size-4" />
-                    </span>
-                    <span className="truncate">{def.title}</span>
-                  </span>
-                  <Button variant="ghost" size="icon-xs" onClick={() => hide(it.key)} title="Ocultar">
-                    <X />
-                  </Button>
-                </div>
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  <Body {...props} />
-                </div>
+                <WidgetChrome def={def} chartProps={props} onHide={() => hide(it.key)} />
               </div>
             );
           })}
         </ReactGridLayout>
       )}
     </div>
+  );
+}
+
+/** Cabecera (grip + título + acciones) y cuerpo de un widget. Expone un slot de
+ *  acciones (junto a la X) al que el body envía sus controles por portal. */
+function WidgetChrome({
+  def,
+  chartProps,
+  onHide,
+}: {
+  def: WidgetDef;
+  chartProps: WidgetProps;
+  onHide: () => void;
+}) {
+  const [actionsEl, setActionsEl] = useState<HTMLElement | null>(null);
+  const Body: FC<WidgetProps> = def.Body;
+  return (
+    <>
+      <div className="mb-2 flex select-none items-center justify-between">
+        <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-foreground">
+          <span
+            className="widget-grip cursor-grab text-muted-foreground group-hover:text-primary"
+            title="Arrastra para mover"
+          >
+            <GripVertical className="size-4" />
+          </span>
+          <span className="truncate">{def.title}</span>
+        </span>
+        <span className="flex items-center gap-0.5">
+          <span ref={setActionsEl} className="flex items-center gap-0.5" />
+          <Button variant="ghost" size="icon-xs" onClick={onHide} title="Ocultar">
+            <X />
+          </Button>
+        </span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <Body {...chartProps} headerSlot={actionsEl} />
+      </div>
+    </>
   );
 }

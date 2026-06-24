@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type FC } from "react";
+import { createPortal } from "react-dom";
 import { NivoDonut, NivoFlows, NivoBalance, NivoCash, NivoCalendar, NivoSunburst, NivoBudgets, NivoGoals } from "../components/charts/nivo";
 import { DateRangeMenu } from "../components/DateRangeMenu";
+import { ColorModeMenu } from "../components/ColorModeMenu";
 import { formatEUR, monthKey } from "../lib/format";
 import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions, dailySpend } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
@@ -19,6 +21,8 @@ export interface WidgetProps {
   from: string;
   to: string;
   version: number;
+  /** Slot de la cabecera del widget (junto a la X) para controles propios. */
+  headerSlot?: HTMLElement | null;
 }
 
 /** Filtro acotado al rango de fechas seleccionado en el dashboard. */
@@ -66,6 +70,8 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
   const [stack, setStack] = useState<number[]>([]);
   // Rango de fechas propio del widget (sobrescribe el global si se usa).
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
+  // null = color de cada categoría; si no, color base para el degradado.
+  const [gradientColor, setGradientColor] = useState<string | null>(null);
   const from = range?.from ?? p.from;
   const to = range?.to ?? p.to;
 
@@ -110,12 +116,18 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
             <button className="link-btn" onClick={() => setStack((s) => s.slice(0, -1))}>← Volver</button>
           </>
         )}
-        <span className="spacer" />
-        <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => setRange({ from: f, to: t })} />
       </div>
       <div className="widget-body">
-        <NivoDonut slices={slices} centerLabel={centerLabel} onSlice={onSlice} />
+        <NivoDonut slices={slices} centerLabel={centerLabel} onSlice={onSlice} gradientColor={gradientColor} />
       </div>
+      {p.headerSlot &&
+        createPortal(
+          <>
+            <ColorModeMenu value={gradientColor} onChange={setGradientColor} />
+            <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => setRange({ from: f, to: t })} />
+          </>,
+          p.headerSlot,
+        )}
     </div>
   );
 };
@@ -162,15 +174,14 @@ const BalanceLineBody: FC<WidgetProps> = (p) => {
   const points = data.filter((pt) => pt.month >= fM && pt.month <= tM);
   const name = p.accountId === "all" ? "Patrimonio neto" : "Saldo";
   return (
-    <div className="widget" style={{ gap: 6 }}>
-      <div className="row" style={{ minHeight: 20 }}>
-        <span className="spacer" />
-        <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => setRange({ from: f, to: t })} />
-      </div>
-      <div className="widget-body">
-        <NivoBalance points={points} name={name} />
-      </div>
-    </div>
+    <>
+      <NivoBalance points={points} name={name} />
+      {p.headerSlot &&
+        createPortal(
+          <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => setRange({ from: f, to: t })} />,
+          p.headerSlot,
+        )}
+    </>
   );
 };
 
