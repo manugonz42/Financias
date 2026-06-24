@@ -185,6 +185,23 @@ export async function cashByMonth(f: TxFilters): Promise<CashPoint[]> {
   );
 }
 
+export interface DailySpend {
+  day: string; // 'YYYY-MM-DD'
+  value: number;
+}
+
+/** Gasto por día (negativos, sin traspasos) para el heatmap calendario. */
+export async function dailySpend(f: TxFilters): Promise<DailySpend[]> {
+  const { clause, params } = buildWhere(f);
+  return query<DailySpend>(
+    `SELECT substr(t.fecha_operacion, 1, 10) AS day,
+            COALESCE(SUM(CASE WHEN t.importe < 0 AND t.is_internal = 0 THEN -t.importe END), 0) AS value
+     FROM transactions t ${clause}
+     GROUP BY day HAVING value > 0 ORDER BY day`,
+    params,
+  );
+}
+
 export interface Subscription {
   merchant: string;
   category: string | null;

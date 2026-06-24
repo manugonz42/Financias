@@ -14,6 +14,44 @@ export interface DonutSlice {
   drillable: boolean;
 }
 
+export interface SunburstNode {
+  id: string;
+  color: string;
+  value?: number; // solo en hojas
+  children?: SunburstNode[];
+}
+
+/**
+ * Árbol de gasto por categorías para el sunburst: root → categorías raíz →
+ * subcategorías. Cada nodo con gasto propio + hijas añade una hoja "(directo)"
+ * para que la suma cuadre. Reutiliza el roll-up por subárbol del donut.
+ */
+export function categorySunburst(cats: Category[], valueById: Map<number, number>): SunburstNode {
+  const childrenOf = childrenMap(cats);
+  const totals = subtreeTotals(cats, valueById, childrenOf);
+  const byId = new Map(cats.map((c) => [c.id, c]));
+
+  const build = (id: number): SunburstNode | null => {
+    const total = totals.get(id) ?? 0;
+    if (total <= 0) return null;
+    const c = byId.get(id);
+    if (!c) return null;
+    const kids = (childrenOf.get(id) ?? [])
+      .map(build)
+      .filter((n): n is SunburstNode => n != null);
+    if (kids.length === 0) return { id: c.name, color: c.color, value: +total.toFixed(2) };
+    const own = valueById.get(id) ?? 0;
+    if (own > 0) kids.push({ id: `${c.name} (directo)`, color: c.color, value: +own.toFixed(2) });
+    return { id: c.name, color: c.color, children: kids };
+  };
+
+  const roots = cats
+    .filter((c) => c.parent_id == null)
+    .map((c) => build(c.id))
+    .filter((n): n is SunburstNode => n != null);
+  return { id: "root", color: "transparent", children: roots };
+}
+
 function childrenMap(cats: Category[]): Map<number, number[]> {
   const m = new Map<number, number[]>();
   for (const c of cats) {

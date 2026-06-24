@@ -5,10 +5,18 @@ import { useMemo } from "react";
 import { ResponsivePie } from "@nivo/pie";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsiveLine } from "@nivo/line";
+import { ResponsiveCalendar } from "@nivo/calendar";
+import { ResponsiveSunburst } from "@nivo/sunburst";
+import { ResponsiveBullet } from "@nivo/bullet";
+import { ResponsiveRadialBar } from "@nivo/radial-bar";
+import { linearGradientDef } from "@nivo/core";
 import { formatEUR, monthLabelShort } from "../../lib/format";
+import { goalPercent } from "../../lib/goals";
 import { useApp } from "../../state/AppContext";
-import type { MonthlyFlow, BalancePoint, CashPoint } from "../../data/stats";
-import type { DonutSlice } from "../../lib/donut";
+import type { MonthlyFlow, BalancePoint, CashPoint, DailySpend } from "../../data/stats";
+import type { DonutSlice, SunburstNode } from "../../lib/donut";
+import type { BudgetRow } from "../../data/budgets";
+import type { Goal } from "../../types";
 
 const EXPENSE = "#ef4444";
 const INCOME = "#22c55e";
@@ -189,6 +197,20 @@ export function NivoFlows({ rows }: { rows: MonthlyFlow[] }) {
         innerPadding={2}
         borderRadius={4}
         colors={({ id }) => (id === "Gastos" ? EXPENSE : INCOME)}
+        defs={[
+          linearGradientDef("gExpense", [
+            { offset: 0, color: EXPENSE },
+            { offset: 100, color: EXPENSE, opacity: 0.5 },
+          ]),
+          linearGradientDef("gIncome", [
+            { offset: 0, color: INCOME },
+            { offset: 100, color: INCOME, opacity: 0.5 },
+          ]),
+        ]}
+        fill={[
+          { match: { id: "Gastos" }, id: "gExpense" },
+          { match: { id: "Ingresos" }, id: "gIncome" },
+        ]}
         enableLabel={false}
         enableGridX={false}
         axisBottom={{ tickSize: 0, tickPadding: 8 }}
@@ -278,6 +300,13 @@ export function NivoCash({ rows }: { rows: CashPoint[] }) {
         padding={0.35}
         borderRadius={4}
         colors={[CASH]}
+        defs={[
+          linearGradientDef("gCash", [
+            { offset: 0, color: CASH },
+            { offset: 100, color: CASH, opacity: 0.45 },
+          ]),
+        ]}
+        fill={[{ match: "*", id: "gCash" }]}
         enableLabel={false}
         enableGridX={false}
         axisBottom={{ tickSize: 0, tickPadding: 8 }}
@@ -289,6 +318,154 @@ export function NivoCash({ rows }: { rows: CashPoint[] }) {
             {d.month} · <b>{formatEUR(Number(d.total))}</b> · {d.count} disposiciones
           </Tip>
         )}
+      />
+    </Fill>
+  );
+}
+
+/* ------------------------------------------------ Heatmap calendario (días) */
+
+export function NivoCalendar({ data, from, to }: { data: DailySpend[]; from: string; to: string }) {
+  const theme = useNivoTheme();
+  const empty = cssVar("--bg-elev", "#273549");
+  const card = cssVar("--bg-card", "#1e293b");
+  return (
+    <Fill>
+      <ResponsiveCalendar
+        data={data}
+        from={from || `${new Date().getFullYear()}-01-01`}
+        to={to || `${new Date().getFullYear()}-12-31`}
+        theme={theme}
+        margin={{ top: 24, right: 16, bottom: 8, left: 24 }}
+        emptyColor={empty}
+        colors={["#c7d2fe", "#a5b4fc", "#818cf8", "#6366f1", "#4338ca"]}
+        monthBorderColor={card}
+        dayBorderColor={card}
+        dayBorderWidth={2}
+        tooltip={(d) => (
+          <Tip>
+            {d.day} · <b>{formatEUR(Number(d.value))}</b>
+          </Tip>
+        )}
+      />
+    </Fill>
+  );
+}
+
+/* --------------------------------------------- Sunburst de categorías (gasto) */
+
+export function NivoSunburst({ root }: { root: SunburstNode }) {
+  const theme = useNivoTheme();
+  const card = cssVar("--bg-card", "#1e293b");
+  return (
+    <Fill>
+      <ResponsiveSunburst
+        data={root}
+        theme={theme}
+        margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        id="id"
+        value="value"
+        cornerRadius={3}
+        borderColor={card}
+        borderWidth={2}
+        colors={(node: any) => node.data?.color ?? "#888"}
+        inheritColorFromParent={false}
+        enableArcLabels={false}
+        motionConfig="gentle"
+        transitionMode="pushIn"
+        tooltip={(node: any) => (
+          <Tip>
+            <Swatch color={node.color} />
+            {node.id} · <b>{formatEUR(Number(node.value))}</b> ({node.percentage.toFixed(1)}%)
+          </Tip>
+        )}
+      />
+    </Fill>
+  );
+}
+
+/* ------------------------------------------- Bullet de presupuestos (gastado) */
+
+export function NivoBudgets({ rows }: { rows: BudgetRow[] }) {
+  const theme = useNivoTheme();
+  const track = cssVar("--bg-elev", "#273549");
+  const marker = cssVar("--text", "#e2e8f0");
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%", overflowY: "auto" }}>
+      {rows.map((b) => {
+        const over = b.spent > b.available;
+        const max = Math.max(b.available, b.spent) || 1;
+        return (
+          <div key={b.category_id}>
+            <div className="row" style={{ fontSize: 13 }}>
+              <span>{b.icon} {b.category_name}</span>
+              <span className="spacer" />
+              <span className={over ? "amount neg" : "muted"}>
+                {formatEUR(b.spent)} / {formatEUR(b.available)}
+              </span>
+            </div>
+            <div style={{ height: 26 }}>
+              <ResponsiveBullet
+                data={[{ id: "", ranges: [max], measures: [b.spent], markers: [b.available] }]}
+                theme={theme}
+                margin={{ top: 2, right: 6, bottom: 2, left: 2 }}
+                spacing={0}
+                titleOffsetX={0}
+                measureSize={0.35}
+                markerSize={1.1}
+                rangeColors={[track]}
+                measureColors={[over ? EXPENSE : b.color]}
+                markerColors={[marker]}
+                animate
+                motionConfig="gentle"
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ----------------------------------------------- Gauge de metas (radial bar) */
+
+export function NivoGoals({ goals }: { goals: Goal[] }) {
+  const theme = useNivoTheme();
+  const track = cssVar("--bg-elev", "#273549");
+  const byName = new Map(goals.map((g) => [g.name, g]));
+  const data = goals.map((g) => ({
+    id: g.name,
+    data: [{ x: "progreso", y: Math.min(100, Math.round(goalPercent(g.current_amount, g.target_amount))) }],
+  }));
+  return (
+    <Fill>
+      <ResponsiveRadialBar
+        data={data}
+        theme={theme}
+        maxValue={100}
+        startAngle={-120}
+        endAngle={120}
+        innerRadius={0.3}
+        padding={0.35}
+        cornerRadius={4}
+        margin={{ top: 16, right: 16, bottom: 16, left: 16 }}
+        colors={goals.map((g) => g.color)}
+        tracksColor={track}
+        enableRadialGrid={false}
+        enableCircularGrid={false}
+        radialAxisStart={{ tickSize: 0, tickPadding: 6 }}
+        circularAxisOuter={null}
+        motionConfig="gentle"
+        tooltip={(bar: any) => {
+          const g = byName.get(bar.groupId);
+          return (
+            <Tip>
+              <Swatch color={bar.color} />
+              {bar.groupId} · <b>{bar.value}%</b>
+              {g && <span style={{ opacity: 0.7 }}> · {formatEUR(g.current_amount)} / {formatEUR(g.target_amount)}</span>}
+            </Tip>
+          );
+        }}
       />
     </Fill>
   );

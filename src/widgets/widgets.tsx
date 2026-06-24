@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useState, type FC } from "react";
-import { NivoDonut, NivoFlows, NivoBalance, NivoCash } from "../components/charts/nivo";
+import { NivoDonut, NivoFlows, NivoBalance, NivoCash, NivoCalendar, NivoSunburst, NivoBudgets, NivoGoals } from "../components/charts/nivo";
 import { formatEUR, monthKey } from "../lib/format";
-import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions } from "../data/stats";
+import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions, dailySpend } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
 import { listGoals } from "../data/goals";
-import { goalPercent } from "../lib/goals";
 import { listScheduled, type ScheduledRow } from "../data/scheduled";
 import { topReceiptItems, type ItemAggregate } from "../data/receipts";
 import { daysUntil } from "../lib/schedule";
-import { donutSlices } from "../lib/donut";
+import { donutSlices, categorySunburst } from "../lib/donut";
 import { useApp } from "../state/AppContext";
 import type { Goal, TxFilters } from "../types";
-import type { MonthlyFlow, BalancePoint, CashPoint, Subscription, KpiSummary, NetWorthNow } from "../data/stats";
+import type { MonthlyFlow, BalancePoint, CashPoint, Subscription, KpiSummary, NetWorthNow, DailySpend } from "../data/stats";
 
 export interface WidgetProps {
   accountId: number | "all";
@@ -176,28 +175,7 @@ const BudgetsBody: FC<WidgetProps> = (p) => {
   }, [month, p.version]);
   if (rows.length === 0)
     return <span className="muted">Define presupuestos en la pestaña «Presupuestos».</span>;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
-      {rows.map((b) => {
-        const pct = b.available > 0 ? Math.min((b.spent / b.available) * 100, 100) : 0;
-        const over = b.spent > b.available;
-        return (
-          <div key={b.category_id}>
-            <div className="row" style={{ fontSize: 13 }}>
-              <span>{b.icon} {b.category_name}</span>
-              <span className="spacer" />
-              <span className={over ? "amount neg" : "muted"}>
-                {formatEUR(b.spent)} / {formatEUR(b.available)}
-              </span>
-            </div>
-            <div className="bar">
-              <span style={{ width: `${pct}%`, background: over ? "var(--bad)" : b.color }} />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+  return <NivoBudgets rows={rows} />;
 };
 
 const SubscriptionsBody: FC<WidgetProps> = (p) => {
@@ -229,26 +207,7 @@ const GoalsBody: FC<WidgetProps> = (p) => {
   }, [p.version]);
   if (goals.length === 0)
     return <span className="muted">Define metas en la pestaña «Metas».</span>;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
-      {goals.map((g) => {
-        const pct = goalPercent(g.current_amount, g.target_amount);
-        const done = g.current_amount >= g.target_amount;
-        return (
-          <div key={g.id}>
-            <div className="row" style={{ fontSize: 13 }}>
-              <span>{g.icon} {g.name}</span>
-              <span className="spacer" />
-              <span className="muted">{formatEUR(g.current_amount)} / {formatEUR(g.target_amount)}</span>
-            </div>
-            <div className="bar">
-              <span style={{ width: `${pct}%`, background: done ? "var(--good)" : g.color }} />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+  return <NivoGoals goals={goals} />;
 };
 
 const UpcomingBody: FC<WidgetProps> = (p) => {
@@ -306,6 +265,26 @@ const ReceiptItemsBody: FC<WidgetProps> = (p) => {
   );
 };
 
+const CalendarBody: FC<WidgetProps> = (p) => {
+  const [data, setData] = useState<DailySpend[]>([]);
+  useEffect(() => {
+    void dailySpend(scope(p)).then(setData);
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  if (data.length === 0) return <span className="muted">Sin gastos en el periodo seleccionado.</span>;
+  return <NivoCalendar data={data} from={p.from} to={p.to} />;
+};
+
+const SunburstBody: FC<WidgetProps> = (p) => {
+  const { categories } = useApp();
+  const [valueById, setValueById] = useState<Map<number, number>>(new Map());
+  useEffect(() => {
+    void spendByCategoryId(scope(p)).then((rows) => setValueById(new Map(rows.map((r) => [r.id, r.value]))));
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  const root = useMemo(() => categorySunburst(categories, valueById), [categories, valueById]);
+  if (valueById.size === 0) return <span className="muted">Sin gastos en el periodo seleccionado.</span>;
+  return <NivoSunburst root={root} />;
+};
+
 export interface WidgetDef {
   key: string;
   title: string;
@@ -326,4 +305,6 @@ export const WIDGETS: WidgetDef[] = [
   { key: "items", title: "En qué se gasta (recibos)", w: 4, h: 7, Body: ReceiptItemsBody },
   { key: "cash", title: "Efectivo en cajero", w: 6, h: 7, Body: CashBody },
   { key: "subs", title: "Pagos recurrentes", w: 6, h: 7, Body: SubscriptionsBody },
+  { key: "calendar", title: "Gasto diario (calendario)", w: 8, h: 6, Body: CalendarBody },
+  { key: "sunburst", title: "Categorías (sunburst)", w: 6, h: 10, Body: SunburstBody },
 ];
