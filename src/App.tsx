@@ -1,4 +1,6 @@
 import { NavLink, Routes, Route } from "react-router-dom";
+import { Sun, Moon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useApp } from "./state/AppContext";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { Dashboard } from "./views/Dashboard";
@@ -34,33 +36,47 @@ const NAV = [
 
 export default function App() {
   const { theme, setTheme } = useApp();
+  const linkBase =
+    "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors";
   return (
-    <div className="app">
-      <aside className="sidebar">
-        <div className="brand">💰 Financias</div>
-        <nav>
+    <div className="flex h-full">
+      <aside className="flex w-56 shrink-0 flex-col gap-0.5 border-r border-border bg-card p-3">
+        <div className="flex items-center gap-2 px-3 pb-4 pt-2 text-lg font-bold text-foreground">
+          💰 Financias
+        </div>
+        <nav className="flex flex-col gap-0.5">
           {NAV.map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
               end={n.end}
-              className={({ isActive }) => (isActive ? "navlink active" : "navlink")}
+              className={({ isActive }) =>
+                cn(
+                  linkBase,
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                )
+              }
             >
-              <img className="navicon" src={n.icon} alt="" />
+              <img className="h-[22px] w-[22px] shrink-0 object-contain" src={n.icon} alt="" />
               <span>{n.label}</span>
             </NavLink>
           ))}
         </nav>
         <button
-          className="navlink theme-toggle"
+          className={cn(
+            linkBase,
+            "mt-auto text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+          )}
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           title="Cambiar tema"
         >
-          <span>{theme === "dark" ? "☀️" : "🌙"}</span>
+          {theme === "dark" ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
           <span>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span>
         </button>
       </aside>
-      <main className="main">
+      <main className="flex-1 overflow-y-auto p-7">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/movimientos" element={<Movimientos />} />
