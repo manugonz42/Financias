@@ -71,9 +71,26 @@ export function Importar() {
             </div>
           ))}
           {results.some((r) => r.warnings.length > 0) && (
-            <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
-              Avisos: {results.reduce((s, r) => s + r.warnings.length, 0)} líneas no estándar omitidas.
-            </p>
+            <details style={{ marginTop: 10 }}>
+              <summary className="muted" style={{ fontSize: 12, cursor: "pointer" }}>
+                Avisos: {results.reduce((s, r) => s + r.warnings.length, 0)} líneas no estándar omitidas (ver detalle)
+              </summary>
+              <pre
+                style={{
+                  fontSize: 11,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  maxHeight: 260,
+                  overflowY: "auto",
+                  marginTop: 8,
+                  padding: 10,
+                  background: "var(--bg-elev)",
+                  borderRadius: 8,
+                }}
+              >
+                {results.flatMap((r) => r.warnings).join("\n")}
+              </pre>
+            </details>
           )}
         </div>
       )}
