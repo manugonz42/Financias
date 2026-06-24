@@ -1,4 +1,5 @@
 import { query, exec } from "../db/database";
+import { isPaletteId, type PaletteId } from "../lib/palettes";
 
 export async function getSetting(key: string): Promise<string | null> {
   const row = (await query<{ value: string }>("SELECT value FROM settings WHERE key = ?", [
@@ -42,4 +43,13 @@ export async function getTheme(): Promise<Theme> {
 
 export async function setThemeSetting(v: Theme): Promise<void> {
   await setSetting("theme", v);
+}
+
+export async function getChartPalette(): Promise<PaletteId> {
+  const v = await getSetting("chart_palette");
+  return isPaletteId(v) ? v : "categoria";
+}
+
+export async function setChartPalette(v: PaletteId): Promise<void> {
+  await setSetting("chart_palette", v);
 }

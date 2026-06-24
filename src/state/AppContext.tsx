@@ -9,7 +9,8 @@ import {
 import type { Account, Category } from "../types";
 import { listAccounts } from "../data/accounts";
 import { listCategories } from "../data/categories";
-import { getExcludeInternal, setExcludeInternal as persistExcl, getOwnerName, getTheme, setThemeSetting, type Theme } from "../data/settings";
+import { getExcludeInternal, setExcludeInternal as persistExcl, getOwnerName, getTheme, setThemeSetting, getChartPalette, setChartPalette, type Theme } from "../data/settings";
+import type { PaletteId } from "../lib/palettes";
 
 interface AppState {
   accounts: Account[];
@@ -23,6 +24,9 @@ interface AppState {
   setExcludeInternal: (v: boolean) => void;
   theme: Theme;
   setTheme: (t: Theme) => void;
+  /** Paleta de gráficos global. Cada widget puede sobreescribirla. */
+  palette: PaletteId;
+  setPalette: (p: PaletteId) => void;
   /** Muestra un aviso breve (toast). */
   toast: (msg: string) => void;
   /** Contador que se incrementa para forzar recarga de datos tras cambios. */
@@ -40,6 +44,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [accountId, setAccountId] = useState<number | "all">("all");
   const [excludeInternal, setExcludeInternalState] = useState(true);
   const [theme, setThemeState] = useState<Theme>("dark");
+  const [palette, setPaletteState] = useState<PaletteId>("categoria");
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
   const [version, setVersion] = useState(0);
 
@@ -55,12 +60,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [accs, cats, excl, owner, th] = await Promise.all([
+      const [accs, cats, excl, owner, th, pal] = await Promise.all([
         listAccounts(),
         listCategories(),
         getExcludeInternal(),
         getOwnerName(),
         getTheme(),
+        getChartPalette(),
       ]);
       if (cancelled) return;
       setAccounts(accs);
@@ -68,6 +74,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setExcludeInternalState(excl);
       setOwnerName(owner);
       setThemeState(th);
+      setPaletteState(pal);
       document.documentElement.setAttribute("data-theme", th);
       setLoading(false);
     })();
@@ -89,6 +96,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setVersion((v) => v + 1); // re-render de widgets/gráficos con el tema nuevo
   }, []);
 
+  const setPalette = useCallback((p: PaletteId) => {
+    setPaletteState(p);
+    void setChartPalette(p);
+    setVersion((v) => v + 1); // re-render de gráficos con la paleta nueva
+  }, []);
+
   return (
     <Ctx.Provider
       value={{
@@ -102,6 +115,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setExcludeInternal,
         theme,
         setTheme,
+        palette,
+        setPalette,
         toast,
         version,
         reload,

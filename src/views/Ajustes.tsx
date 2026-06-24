@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../state/AppContext";
+import { PALETTES, type PaletteId } from "../lib/palettes";
 import { ExcludeInternalToggle } from "../components/Controls";
 import { CategoryManager } from "../components/CategoryManager";
 import { ManualAccounts } from "../components/ManualAccounts";
@@ -10,7 +11,7 @@ import { formatEUR } from "../lib/format";
 import type { Account } from "../types";
 
 export function Ajustes() {
-  const { reload } = useApp();
+  const { reload, palette, setPalette } = useApp();
   const [owner, setOwner] = useState("");
   const [accounts, setAccounts] = useState<Array<Account & { balance: number }>>([]);
   const [confirming, setConfirming] = useState(false);
@@ -83,6 +84,24 @@ export function Ajustes() {
       <div className="card" style={{ marginBottom: 16 }}>
         <h3>Análisis</h3>
         <ExcludeInternalToggle />
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3>Paleta de gráficos</h3>
+        <p className="muted" style={{ fontSize: 13 }}>
+          Paleta por defecto de los gráficos del dashboard. Cada widget puede
+          sobreescribirla con su botón 🎨.
+        </p>
+        <div className="row" style={{ gap: 8 }}>
+          <select
+            value={palette}
+            onChange={(e) => setPalette(e.target.value as PaletteId)}
+          >
+            {PALETTES.map((p) => (
+              <option key={p.id} value={p.id}>{p.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="card" style={{ borderColor: "var(--bad)" }}>

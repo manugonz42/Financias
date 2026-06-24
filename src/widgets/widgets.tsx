@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, type FC } from "react";
 import { createPortal } from "react-dom";
 import { NivoDonut, NivoFlows, NivoBalance, NivoCash, NivoCalendar, NivoSunburst, NivoBudgets, NivoGoals } from "../components/charts/nivo";
 import { DateRangeMenu } from "../components/DateRangeMenu";
-import { ColorModeMenu } from "../components/ColorModeMenu";
+import { PaletteMenu } from "../components/PaletteMenu";
+import { useChartPalette } from "../components/charts/useChartPalette";
 import { formatEUR, monthKey } from "../lib/format";
 import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions, dailySpend } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
@@ -23,6 +24,8 @@ export interface WidgetProps {
   version: number;
   /** Slot de la cabecera del widget (junto a la X) para controles propios. */
   headerSlot?: HTMLElement | null;
+  /** Identificador del widget (sirve para persistir el override de paleta). */
+  widgetKey?: string;
 }
 
 /** Filtro acotado al rango de fechas seleccionado en el dashboard. */
@@ -70,8 +73,7 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
   const [stack, setStack] = useState<number[]>([]);
   // Rango de fechas propio del widget (sobrescribe el global si se usa).
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
-  // null = color de cada categoría; si no, color base para el degradado.
-  const [gradientColor, setGradientColor] = useState<string | null>(null);
+  const { colors, override, setOverride } = useChartPalette(p.widgetKey);
   const from = range?.from ?? p.from;
   const to = range?.to ?? p.to;
 
@@ -118,12 +120,12 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
         )}
       </div>
       <div className="widget-body">
-        <NivoDonut slices={slices} centerLabel={centerLabel} onSlice={onSlice} gradientColor={gradientColor} />
+        <NivoDonut slices={slices} centerLabel={centerLabel} onSlice={onSlice} palette={colors} />
       </div>
       {p.headerSlot &&
         createPortal(
           <>
-            <ColorModeMenu value={gradientColor} onChange={setGradientColor} />
+            <PaletteMenu value={override} onChange={setOverride} />
             <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => setRange({ from: f, to: t })} />
           </>,
           p.headerSlot,
@@ -152,16 +154,23 @@ const NetWorthBody: FC<WidgetProps> = (p) => {
 
 const MonthlyBarsBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<MonthlyFlow[]>([]);
+  const { colors, override, setOverride } = useChartPalette(p.widgetKey);
   useEffect(() => {
     void monthlyFlows(scope(p)).then(setData);
   }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
-  return <NivoFlows rows={data} />;
+  return (
+    <>
+      <NivoFlows rows={data} palette={colors} />
+      {p.headerSlot && createPortal(<PaletteMenu value={override} onChange={setOverride} />, p.headerSlot)}
+    </>
+  );
 };
 
 const BalanceLineBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<BalancePoint[]>([]);
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
+  const { colors, override, setOverride } = useChartPalette(p.widgetKey);
   useEffect(() => {
     if (p.accountId === "all") void netWorthSeries().then(setData);
     else void accountBalanceSeries(p.accountId).then(setData);
@@ -175,10 +184,13 @@ const BalanceLineBody: FC<WidgetProps> = (p) => {
   const name = p.accountId === "all" ? "Patrimonio neto" : "Saldo";
   return (
     <>
-      <NivoBalance points={points} name={name} />
+      <NivoBalance points={points} name={name} palette={colors} />
       {p.headerSlot &&
         createPortal(
-          <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => setRange({ from: f, to: t })} />,
+          <>
+            <PaletteMenu value={override} onChange={setOverride} />
+            <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => setRange({ from: f, to: t })} />
+          </>,
           p.headerSlot,
         )}
     </>
@@ -187,6 +199,7 @@ const BalanceLineBody: FC<WidgetProps> = (p) => {
 
 const CashBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<CashPoint[]>([]);
+  const { colors, override, setOverride } = useChartPalette(p.widgetKey);
   useEffect(() => {
     void cashByMonth(scope(p)).then(setData);
   }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
@@ -195,7 +208,8 @@ const CashBody: FC<WidgetProps> = (p) => {
   return (
     <div className="widget" style={{ gap: 6 }}>
       <div className="muted">Total retirado: <b style={{ color: "var(--text)" }}>{formatEUR(total)}</b></div>
-      <div className="widget-body"><NivoCash rows={data} /></div>
+      <div className="widget-body"><NivoCash rows={data} palette={colors} /></div>
+      {p.headerSlot && createPortal(<PaletteMenu value={override} onChange={setOverride} />, p.headerSlot)}
     </div>
   );
 };
@@ -301,22 +315,34 @@ const ReceiptItemsBody: FC<WidgetProps> = (p) => {
 
 const CalendarBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<DailySpend[]>([]);
+  const { colors, override, setOverride } = useChartPalette(p.widgetKey);
   useEffect(() => {
     void dailySpend(scope(p)).then(setData);
   }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   if (data.length === 0) return <span className="muted">Sin gastos en el periodo seleccionado.</span>;
-  return <NivoCalendar data={data} from={p.from} to={p.to} />;
+  return (
+    <>
+      <NivoCalendar data={data} from={p.from} to={p.to} palette={colors} />
+      {p.headerSlot && createPortal(<PaletteMenu value={override} onChange={setOverride} />, p.headerSlot)}
+    </>
+  );
 };
 
 const SunburstBody: FC<WidgetProps> = (p) => {
   const { categories } = useApp();
   const [valueById, setValueById] = useState<Map<number, number>>(new Map());
+  const { colors, override, setOverride } = useChartPalette(p.widgetKey);
   useEffect(() => {
     void spendByCategoryId(scope(p)).then((rows) => setValueById(new Map(rows.map((r) => [r.id, r.value]))));
   }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   const root = useMemo(() => categorySunburst(categories, valueById), [categories, valueById]);
   if (valueById.size === 0) return <span className="muted">Sin gastos en el periodo seleccionado.</span>;
-  return <NivoSunburst root={root} />;
+  return (
+    <>
+      <NivoSunburst root={root} palette={colors} />
+      {p.headerSlot && createPortal(<PaletteMenu value={override} onChange={setOverride} />, p.headerSlot)}
+    </>
+  );
 };
 
 const MonthCompareBody: FC<WidgetProps> = (p) => {

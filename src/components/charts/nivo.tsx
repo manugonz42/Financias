@@ -21,6 +21,7 @@ import type { Goal } from "../../types";
 const EXPENSE = "#ef4444";
 const INCOME = "#22c55e";
 const CASH = "#0ea5e9";
+const CALENDAR_SCALE = ["#c7d2fe", "#a5b4fc", "#818cf8", "#6366f1", "#4338ca"];
 
 function cssVar(name: string, fallback: string): string {
   if (typeof document === "undefined") return fallback;
@@ -74,19 +75,6 @@ function Fill({ children }: { children: React.ReactNode }) {
   return <div style={{ height: "100%", width: "100%" }}>{children}</div>;
 }
 
-/** Tonaliza un color hex: t<0 hacia negro (más oscuro), t>0 hacia blanco (más claro). */
-function shade(hex: string, t: number): string {
-  const m = hex.replace("#", "");
-  const n = m.length === 3 ? m.split("").map((c) => c + c).join("") : m;
-  const r = parseInt(n.slice(0, 2), 16);
-  const g = parseInt(n.slice(2, 4), 16);
-  const b = parseInt(n.slice(4, 6), 16);
-  const target = t < 0 ? 0 : 255;
-  const a = Math.abs(t);
-  const mix = (c: number) => Math.round(c + (target - c) * a);
-  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
-}
-
 function Swatch({ color }: { color: string }) {
   return (
     <span
@@ -110,26 +98,24 @@ export function NivoDonut({
   slices,
   centerLabel,
   onSlice,
-  gradientColor,
+  palette,
 }: {
   slices: DonutSlice[];
   centerLabel?: string;
   onSlice?: (id: number) => void;
-  gradientColor?: string | null;
+  /** Si se pasa, pinta cada porción por índice; si es null/undefined, color de cada categoría. */
+  palette?: string[] | null;
 }) {
   const theme = useNivoTheme();
   const text = cssVar("--text", "#e2e8f0");
-  const card = cssVar("--bg-card", "#1e293b");
   const total = slices.reduce((s, x) => s + x.value, 0) || 1;
-  const n = slices.length;
 
   const data: PieDatum[] = slices.map((s, i) => ({
     id: String(s.id),
     catId: s.id,
     label: s.name,
     value: +s.value.toFixed(2),
-    // Con color base: degradado monocromo fuerte (mayor porción = más oscura).
-    color: gradientColor ? shade(gradientColor, n > 1 ? -0.4 + (i / (n - 1)) * 0.95 : 0) : s.color,
+    color: palette && palette.length ? palette[i % palette.length] : s.color,
     drillable: s.drillable,
   }));
 
@@ -151,16 +137,8 @@ export function NivoDonut({
         cornerRadius={2}
         activeOuterRadiusOffset={8}
         colors={{ datum: "data.color" }}
-        borderWidth={1}
-        borderColor={card}
-        defs={[
-          linearGradientDef("sliceShade", [
-            { offset: 0, color: "inherit:brighter(0.7)" },
-            { offset: 55, color: "inherit" },
-            { offset: 100, color: "inherit:darker(0.9)" },
-          ]),
-        ]}
-        fill={[{ match: "*", id: "sliceShade" }]}
+        borderWidth={1.5}
+        borderColor={{ from: "color", modifiers: [["darker", 0.5]] }}
         enableArcLabels={false}
         enableArcLinkLabels={false}
         motionConfig="gentle"
@@ -202,13 +180,15 @@ export function NivoDonut({
 
 /* ----------------------------------------------- Barras: gastos vs ingresos */
 
-export function NivoFlows({ rows }: { rows: MonthlyFlow[] }) {
+export function NivoFlows({ rows, palette }: { rows: MonthlyFlow[]; palette?: string[] | null }) {
   const theme = useNivoTheme();
   const data = rows.map((r) => ({
     month: monthLabelShort(r.month),
     Gastos: +r.expense.toFixed(2),
     Ingresos: +r.income.toFixed(2),
   }));
+  const expense = palette && palette.length ? palette[0] : EXPENSE;
+  const income = palette && palette.length > 1 ? palette[1] : (palette && palette.length ? palette[0] : INCOME);
   return (
     <Fill>
       <ResponsiveBar
@@ -221,15 +201,15 @@ export function NivoFlows({ rows }: { rows: MonthlyFlow[] }) {
         padding={0.3}
         innerPadding={2}
         borderRadius={4}
-        colors={({ id }) => (id === "Gastos" ? EXPENSE : INCOME)}
+        colors={({ id }) => (id === "Gastos" ? expense : income)}
         defs={[
           linearGradientDef("gExpense", [
-            { offset: 0, color: EXPENSE },
-            { offset: 100, color: EXPENSE, opacity: 0.5 },
+            { offset: 0, color: expense },
+            { offset: 100, color: expense, opacity: 0.5 },
           ]),
           linearGradientDef("gIncome", [
-            { offset: 0, color: INCOME },
-            { offset: 100, color: INCOME, opacity: 0.5 },
+            { offset: 0, color: income },
+            { offset: 100, color: income, opacity: 0.5 },
           ]),
         ]}
         fill={[
@@ -282,9 +262,9 @@ const GlowLine = ({ series, lineGenerator }: any) =>
     />
   ));
 
-export function NivoBalance({ points, name }: { points: BalancePoint[]; name: string }) {
+export function NivoBalance({ points, name, palette }: { points: BalancePoint[]; name: string; palette?: string[] | null }) {
   const theme = useNivoTheme();
-  const color = cssVar("--accent", "#6366f1");
+  const color = palette && palette.length ? palette[0] : cssVar("--accent", "#6366f1");
   const data = [
     {
       id: name,
@@ -346,8 +326,9 @@ export function NivoBalance({ points, name }: { points: BalancePoint[]; name: st
 
 /* --------------------------------------------------- Barras: efectivo cajero */
 
-export function NivoCash({ rows }: { rows: CashPoint[] }) {
+export function NivoCash({ rows, palette }: { rows: CashPoint[]; palette?: string[] | null }) {
   const theme = useNivoTheme();
+  const cash = palette && palette.length ? palette[0] : CASH;
   const data = rows.map((r) => ({
     month: monthLabelShort(r.month),
     total: +r.total.toFixed(2),
@@ -363,11 +344,11 @@ export function NivoCash({ rows }: { rows: CashPoint[] }) {
         margin={{ top: 16, right: 16, bottom: 28, left: 52 }}
         padding={0.35}
         borderRadius={4}
-        colors={[CASH]}
+        colors={[cash]}
         defs={[
           linearGradientDef("gCash", [
-            { offset: 0, color: CASH },
-            { offset: 100, color: CASH, opacity: 0.45 },
+            { offset: 0, color: cash },
+            { offset: 100, color: cash, opacity: 0.45 },
           ]),
         ]}
         fill={[{ match: "*", id: "gCash" }]}
@@ -378,7 +359,7 @@ export function NivoCash({ rows }: { rows: CashPoint[] }) {
         motionConfig="gentle"
         tooltip={({ data: d }) => (
           <Tip>
-            <Swatch color={CASH} />
+            <Swatch color={cash} />
             {d.month} · <b>{formatEUR(Number(d.total))}</b> · {d.count} disposiciones
           </Tip>
         )}
@@ -389,10 +370,12 @@ export function NivoCash({ rows }: { rows: CashPoint[] }) {
 
 /* ------------------------------------------------ Heatmap calendario (días) */
 
-export function NivoCalendar({ data, from, to }: { data: DailySpend[]; from: string; to: string }) {
+export function NivoCalendar({ data, from, to, palette }: { data: DailySpend[]; from: string; to: string; palette?: string[] | null }) {
   const theme = useNivoTheme();
   const empty = cssVar("--bg-elev", "#273549");
   const card = cssVar("--bg-card", "#1e293b");
+  // Escala de la heatmap: si la paleta tiene ≥3 colores la usamos (primeros 5), si no la del tema.
+  const scale = palette && palette.length >= 3 ? palette.slice(0, 5) : CALENDAR_SCALE;
   return (
     <Fill>
       <ResponsiveCalendar
@@ -402,7 +385,7 @@ export function NivoCalendar({ data, from, to }: { data: DailySpend[]; from: str
         theme={theme}
         margin={{ top: 24, right: 16, bottom: 8, left: 24 }}
         emptyColor={empty}
-        colors={["#c7d2fe", "#a5b4fc", "#818cf8", "#6366f1", "#4338ca"]}
+        colors={scale}
         monthBorderColor={card}
         dayBorderColor={card}
         dayBorderWidth={2}
@@ -418,9 +401,8 @@ export function NivoCalendar({ data, from, to }: { data: DailySpend[]; from: str
 
 /* --------------------------------------------- Sunburst de categorías (gasto) */
 
-export function NivoSunburst({ root }: { root: SunburstNode }) {
+export function NivoSunburst({ root, palette }: { root: SunburstNode; palette?: string[] | null }) {
   const theme = useNivoTheme();
-  const card = cssVar("--bg-card", "#1e293b");
   return (
     <Fill>
       <ResponsiveSunburst
@@ -430,18 +412,20 @@ export function NivoSunburst({ root }: { root: SunburstNode }) {
         id="id"
         value="value"
         cornerRadius={3}
-        borderColor={card}
-        borderWidth={2}
-        colors={(node: any) => node.data?.color ?? "#888"}
+        borderWidth={1.5}
+        borderColor={{ from: "color", modifiers: [["darker", 0.5]] }}
+        colors={
+          palette && palette.length
+            ? (node: any) => {
+                // Reparte la paleta por nodo (usando la posición del id en la lista).
+                const k = String(node.id ?? "");
+                let h = 0;
+                for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+                return palette[h % palette.length];
+              }
+            : (node: any) => node.data?.color ?? "#888"
+        }
         inheritColorFromParent={false}
-        defs={[
-          linearGradientDef("sliceShade", [
-            { offset: 0, color: "inherit:brighter(0.7)" },
-            { offset: 55, color: "inherit" },
-            { offset: 100, color: "inherit:darker(0.9)" },
-          ]),
-        ]}
-        fill={[{ match: "*", id: "sliceShade" }]}
         enableArcLabels={false}
         motionConfig="gentle"
         transitionMode="pushIn"

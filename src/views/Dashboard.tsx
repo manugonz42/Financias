@@ -236,7 +236,7 @@ function WidgetChrome({
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <Body {...chartProps} headerSlot={actionsEl} />
+        <Body {...chartProps} headerSlot={actionsEl} widgetKey={def.key} />
       </div>
     </>
   );
