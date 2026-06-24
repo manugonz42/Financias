@@ -27,6 +27,36 @@ const DATE_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 // Símbolo € opcional. Ejemplos: "-9,99 €", "1463,27 €", "1.234,56", "-1000,99 €".
 const AMOUNT_RE = /^-?\d+(?:\.\d{3})*,\d{2}(?:\s?€)?$/;
 
+// Etiquetas que BBVA imprime junto a la fecha de valor para identificar el tipo
+// de movimiento. Aparecen separadas en varios tokens (pdf.js tokeniza por
+// palabra), así que detectamos secuencias contiguas. ORDENADAS POR LONGITUD
+// DESCENDENTE para que las secuencias largas casen antes que sus prefijos
+// (p. ej. "Transfer from card" antes que "Transfer received" o "Transfer").
+const BBVA_SUBTYPE_SEQS: readonly string[][] = [
+  ["Deposit", "from", "salary", "or", "pension"],
+  ["Fees,expenses", "and", "interest", "paid"],
+  ["Transfer", "from", "card"],
+  ["Monthly", "card", "debit"],
+  ["Loan", "instalment"],
+  ["ATM", "withdrawal"],
+  ["Cash", "withdrawal"],
+  ["Cash", "deposit"],
+  ["Card", "payment"],
+  ["Direct", "debit"],
+  ["Bizum", "payment"],
+  ["Bizum", "received"],
+  ["Transfer", "received"],
+  ["Transfer", "in"],
+  ["Transfer", "out"],
+  ["Transfer"],
+  ["Subscription"],
+  ["Interest"],
+  ["Devuelto:"],
+  ["Others"],
+  ["Bizum"],
+  ["Fee"],
+];
+
 // Cabeceras, pie de página y texto repetido que descartamos del concepto.
 // pdf.js tokeniza muchas frases palabra a palabra; por eso aparecen sueltas
 // "Latest", "movements", "Value", "date"… y hay que filtrarlas individualmente.
@@ -125,8 +155,13 @@ function buildTransaction(rec: Record, warnings: string[]): ParsedTransaction | 
   const amounts = rec.tokens.filter((t) => isAmount(t.str));
 
   if (dates.length < 1 || amounts.length < 2) {
+    const preview = rec.tokens
+      .sort((a, b) => b.y - a.y || a.x - b.x)
+      .map((t) => t.str)
+      .join(" ")
+      .slice(0, 140);
     warnings.push(
-      `Registro BBVA descartado (faltan fechas o importes): "${rec.tokens.map((t) => t.str).join(" ").slice(0, 80)}"`,
+      `BBVA descartado [dates=${dates.length} amounts=${amounts.length}]: "${preview}"`,
     );
     return null;
   }
@@ -142,13 +177,21 @@ function buildTransaction(rec: Record, warnings: string[]): ParsedTransaction | 
   const importeTok = sortedAmounts[sortedAmounts.length - 2];
   const saldoTok = sortedAmounts[sortedAmounts.length - 1];
 
-  // Concepto = resto de tokens, quitando "Value date" (etiqueta de la fila
-  // inferior) y conservando el subtipo (p.ej. "Card payment") como texto.
+  // Concepto = resto de tokens. Identificamos también la etiqueta de subtipo
+  // ("Card payment", "Direct debit"…) como secuencia contigua y la dejamos
+  // fuera del concepto para no contaminar la regla de comercio.
   const excluded = new Set<PdfItem>([sortedDates[0], importeTok, saldoTok]);
   if (sortedDates[1]) excluded.add(sortedDates[1]);
-  const conceptoTokens = rec.tokens
+
+  const ordered = rec.tokens
     .filter((t) => !excluded.has(t))
     .sort((a, b) => b.y - a.y || a.x - b.x);
+  const labelHit = findSubtypeLabel(ordered);
+  if (labelHit) {
+    for (const t of labelHit.tokens) excluded.add(t);
+  }
+
+  const conceptoTokens = ordered.filter((t) => !excluded.has(t));
   const concepto = conceptoTokens
     .map((t) => t.str)
     .join(" ")
@@ -163,11 +206,37 @@ function buildTransaction(rec: Record, warnings: string[]): ParsedTransaction | 
       concepto,
       importe: parseBbvaAmount(importeTok.str),
       saldo: parseBbvaAmount(saldoTok.str),
+      bankSubtypeLabel: labelHit?.label,
     };
   } catch (e) {
     warnings.push(`Error parseando registro BBVA: ${(e as Error).message}`);
     return null;
   }
+}
+
+/** Busca en los tokens ya ordenados una secuencia contigua que case con alguna
+ *  etiqueta de subtipo conocida. Comparación insensible a mayúsculas. */
+function findSubtypeLabel(
+  ordered: PdfItem[],
+): { tokens: PdfItem[]; label: string } | null {
+  for (const seq of BBVA_SUBTYPE_SEQS) {
+    for (let i = 0; i <= ordered.length - seq.length; i++) {
+      let match = true;
+      for (let j = 0; j < seq.length; j++) {
+        if (ordered[i + j].str.toLowerCase() !== seq[j].toLowerCase()) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        return {
+          tokens: ordered.slice(i, i + seq.length),
+          label: seq.join(" "),
+        };
+      }
+    }
+  }
+  return null;
 }
 
 /** Parsea un extracto completo (todas las páginas) de BBVA. */

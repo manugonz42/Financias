@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from "react";
+import { useApp } from "../state/AppContext";
+import { paletteColors } from "../lib/palettes";
 
 /** Paleta de colores para categorías. Tonos saturados con buen contraste sobre
  *  el fondo claro y oscuro. El primer color NO es gris para evitar que las
- *  categorías nuevas nazcan apagadas. */
+ *  categorías nuevas nazcan apagadas. Se usa cuando la paleta global es
+ *  «categoria» (color individual por categoría); el resto de paletas usan sus
+ *  propios colores. */
 export const CATEGORY_COLORS: string[] = [
   "#22c55e", "#16a34a", "#84cc16", "#65a30d",
   "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9",
@@ -15,12 +19,13 @@ export const CATEGORY_COLORS: string[] = [
 /**
  * Devuelve un color de la paleta a partir del nombre de la categoría
  * (hash determinista). Útil para auto-asignar un color "no gris" al crear.
+ * Si se pasa un array de colores se usa ese; si no, la paleta por defecto.
  */
-export function colorForName(name: string): string {
-  if (!name) return CATEGORY_COLORS[0];
+export function colorForName(name: string, palette: string[] = CATEGORY_COLORS): string {
+  if (!name) return palette[0];
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return CATEGORY_COLORS[h % CATEGORY_COLORS.length];
+  return palette[h % palette.length];
 }
 
 export function ColorPicker({
@@ -30,6 +35,8 @@ export function ColorPicker({
   value: string;
   onChange: (color: string) => void;
 }) {
+  const { palette } = useApp();
+  const swatches = paletteColors(palette) ?? CATEGORY_COLORS;
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
@@ -77,7 +84,7 @@ export function ColorPicker({
             gap: 6,
           }}
         >
-          {CATEGORY_COLORS.map((c) => {
+          {swatches.map((c) => {
             const selected = c.toLowerCase() === value.toLowerCase();
             return (
               <button

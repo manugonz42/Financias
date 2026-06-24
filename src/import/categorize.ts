@@ -48,12 +48,37 @@ export function extractMerchant(concepto: string): string | null {
   // Recibos domiciliados: "RECIBO <X> Nº RECIBO" / "RECIBO <X> N° RECIBO"
   m = /RECIBO\s+(.+?)\s+N[º°]\s*RECIBO/i.exec(concepto);
   if (m) return clean(m[1]);
+  // Bizum (contraparte): "BIZUM ENVIADO/RECIBIDO/A FAVOR DE/DE <X>" o
+  // "BIZUM TO/FROM <X>". Se prueba antes que las transferencias para que el
+  // patrón de transferencia no se trague el "DE/A FAVOR DE" del Bizum.
+  // Orden de alternativas: las largas (con preposición incluida) ANTES que las
+  // cortas para que "ENVIADO A" gane sobre "ENVIADO" suelto.
+  m = /\bBIZUM(?:\s+(?:A\s+FAVOR\s+DE|ENVIADO\s+A|RECIBIDO\s+DE|ENVIADO|RECIBIDO|PAGO|DE|TO|FROM))?\s+(.+?)(?:\s+CONCEPTO|\s*$)/i.exec(concepto);
+  if (m) return clean(m[1]);
+  // Pago por móvil (Openbank): "PAGO MOVIL <X> ..."
+  m = /^PAGO MOVIL(?:\s+EN)?\s+(.+?)(?:\s+\d|\s*$)/i.exec(concepto);
+  if (m) return clean(m[1]);
   // Transferencias a favor de un tercero
   m = /A FAVOR DE\s+(.+?)(?:\s+CONCEPTO|\s*$)/i.exec(concepto);
   if (m) return clean(m[1]);
   // Transferencias recibidas
   m = /TRANSFERENCIA(?:\s+INMEDIATA)?\s+DE\s+(.+?)(?:,?\s*CONCEPTO|\s*$)/i.exec(concepto);
   if (m) return clean(m[1]);
+  // Recibos sin el sufijo "Nº RECIBO" (formato resumido).
+  m = /^RECIBO\s+(.{2,60}?)(?:\s+IMPORTE|\s+REF|\s+REC\b|\s*$)/i.exec(concepto);
+  if (m) return clean(m[1]);
+  // Heurística para BBVA con concepto ya limpio (sin etiqueta de subtipo): si
+  // queda una cadena corta (≤ 6 palabras, sin secuencias largas de dígitos),
+  // la tomamos como nombre del comercio. Permite agrupar bien en Categorizar.
+  const trimmed = concepto.trim();
+  if (
+    trimmed.length > 0 &&
+    trimmed.length <= 60 &&
+    trimmed.split(/\s+/).length <= 6 &&
+    !/\d{6,}/.test(trimmed)
+  ) {
+    return clean(trimmed);
+  }
   return null;
 }
 
@@ -67,15 +92,31 @@ export function extractCardLast4(concepto: string): string | null {
   return m ? m[1].slice(-4) : null;
 }
 
-/** Infiere el subtipo a partir del concepto normalizado. */
-function inferSubtype(n: string): Subtype {
-  if (/DISPOSICION EN CAJERO/.test(n)) return "cajero";
-  if (/COMPRA EN|COMPRA REALIZ/.test(n)) return "compra";
-  if (/RECIBO/.test(n)) return "recibo";
-  if (/TRANSFERENCIA/.test(n)) return "transferencia";
-  if (/LIQUIDACION/.test(n)) return "interes";
-  if (/ABONO|REGULARIZACION|BONIFICACION/.test(n)) return "abono";
-  if (/COMISION/.test(n)) return "comision";
+/** Infiere el subtipo a partir del concepto normalizado y de la etiqueta de
+ *  subtipo opcional que algunos bancos imprimen (BBVA: "Card payment"…). */
+function inferSubtype(n: string, label?: string): Subtype {
+  if (label) {
+    const l = label.toLowerCase();
+    if (l.includes("deposit from salary")) return "nomina";
+    if (l.includes("fees") && l.includes("interest")) return "comision";
+    if (l.includes("loan instalment")) return "recibo";
+    if (l.includes("devuelto")) return "abono";
+    if (l.includes("card payment") || l.includes("subscription")) return "compra";
+    if (l.includes("direct debit")) return "recibo";
+    if (l.includes("atm") || l.includes("cash withdrawal")) return "cajero";
+    if (l.includes("cash deposit")) return "transferencia";
+    if (l.includes("monthly card debit") || l.includes("transfer from card")) return "transferencia";
+    if (l.includes("transfer") || l.includes("bizum")) return "transferencia";
+    if (l.includes("interest")) return "interes";
+    if (l.includes("fee")) return "comision";
+  }
+  if (/DISPOSICION EN CAJERO|ATM WITHDRAWAL|CASH WITHDRAWAL|RETIRADA (?:DE )?EFECTIVO/.test(n)) return "cajero";
+  if (/COMPRA EN|COMPRA REALIZ|CARD PAYMENT/.test(n)) return "compra";
+  if (/RECIBO|DIRECT DEBIT|LOAN INSTALMENT/.test(n)) return "recibo";
+  if (/TRANSFERENCIA|TRANSFER|BIZUM|FUNDED CARD OPERATION|MONTHLY CARD DEBIT/.test(n)) return "transferencia";
+  if (/LIQUIDACION|INTEREST/.test(n)) return "interes";
+  if (/ABONO|REGULARIZACION|BONIFICACION|DEVUELTO/.test(n)) return "abono";
+  if (/COMISION|\bFEE\b|FEES,EXPENSES/.test(n)) return "comision";
   return "otro";
 }
 
@@ -95,7 +136,11 @@ export function categorize(
   rules: CompiledRule[],
   ownerName: string,
 ): CategorizedFields {
-  const n = normalize(tx.concepto);
+  // Concatenamos la etiqueta de subtipo del banco (BBVA: "Card payment"…) al
+  // texto normalizado para que las reglas la vean a la hora de casar (p.ej.
+  // "Bizum payment" → categoría Bizum sin depender del concepto).
+  const label = tx.bankSubtypeLabel ?? "";
+  const n = normalize(`${tx.concepto} ${label}`).trim();
   const ownerNorm = normalize(ownerName || "");
   const merchant = extractMerchant(tx.concepto);
   const cardLast4 = extractCardLast4(tx.concepto);
@@ -118,7 +163,7 @@ export function categorize(
     if (rule.re.test(n)) {
       return {
         category: rule.category,
-        subtype: rule.subtype ?? inferSubtype(n),
+        subtype: rule.subtype ?? inferSubtype(n, label),
         merchant,
         cardLast4,
         isInternal: rule.category === INTERNAL_CATEGORY,
@@ -129,7 +174,7 @@ export function categorize(
   // Sin regla: categoría por defecto según el signo del importe.
   return {
     category: tx.importe < 0 ? FALLBACK_EXPENSE : FALLBACK_INCOME,
-    subtype: inferSubtype(n),
+    subtype: inferSubtype(n, label),
     merchant,
     cardLast4,
     isInternal: false,

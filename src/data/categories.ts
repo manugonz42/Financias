@@ -201,16 +201,16 @@ export async function categoryIdMap(): Promise<Map<string, number>> {
 }
 
 export async function reassignCategory(txId: number, categoryId: number): Promise<void> {
-  // Al reasignar manualmente, marca interno=0 salvo que sea la categoría interna.
+  // Al reasignar manualmente, marca interno=0 salvo que sea la categoría interna,
+  // y deja constancia de que la categoría es manual (para poder revertirla).
   const cat = (await query<{ kind: string }>("SELECT kind FROM categories WHERE id = ?", [
     categoryId,
   ]))[0];
   const internal = cat?.kind === "interno" ? 1 : 0;
-  await exec("UPDATE transactions SET category_id = ?, is_internal = ? WHERE id = ?", [
-    categoryId,
-    internal,
-    txId,
-  ]);
+  await exec(
+    "UPDATE transactions SET category_id = ?, is_internal = ?, manual_category = 1 WHERE id = ?",
+    [categoryId, internal, txId],
+  );
 }
 
 /**
@@ -233,7 +233,7 @@ export async function reassignCategoryByElement(
   if (!tx) return 0;
   const res = await exec(
     `UPDATE transactions
-        SET category_id = ?, is_internal = ?
+        SET category_id = ?, is_internal = ?, manual_category = 1
       WHERE COALESCE(NULLIF(merchant, ''), concepto) = ?`,
     [categoryId, internal, tx.key],
   );

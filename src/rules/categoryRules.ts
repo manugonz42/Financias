@@ -59,6 +59,7 @@ export const CATEGORIES: CategorySeed[] = [
   { name: "Hogar", kind: "gasto", color: "#f59e0b", icon: "🏠" },
   { name: "Alquiler", kind: "gasto", color: "#e11d48", icon: "🔑" },
   { name: "Cajero / Efectivo", kind: "gasto", color: "#0ea5e9", icon: "🏧" },
+  { name: "Bizum", kind: "gasto", color: "#fb7185", icon: "💸" },
   { name: "Comisiones bancarias", kind: "gasto", color: "#94a3b8", icon: "🏦" },
   { name: "Otros gastos", kind: "gasto", color: "#9ca3af", icon: "•" },
   // Ingresos
@@ -74,38 +75,46 @@ export const FALLBACK_EXPENSE = "Otros gastos";
 export const FALLBACK_INCOME = "Otros ingresos";
 export const INTERNAL_CATEGORY = "Traspaso interno";
 export const CASH_CATEGORY = "Cajero / Efectivo";
+export const BIZUM_CATEGORY = "Bizum";
 
 // --- Reglas de comercios (sobre concepto normalizado) -------------------------
 // Nota: el concepto se normaliza a MAYÚSCULAS y SIN ACENTOS antes de probar.
 
 export const RULES: RuleSeed[] = [
   // Cajero / efectivo
-  { pattern: "DISPOSICION EN CAJERO", category: "Cajero / Efectivo", subtype: "cajero", priority: 5 },
+  { pattern: "DISPOSICION EN CAJERO|ATM WITHDRAWAL|CASH WITHDRAWAL|RETIRADA (?:DE )?EFECTIVO|REINTEGRO EN CAJERO", category: "Cajero / Efectivo", subtype: "cajero", priority: 5 },
+
+  // Bizum (movimiento de persona a persona). Va con prioridad alta para que
+  // capture antes que reglas genéricas. Cubre tanto el español de Openbank
+  // ("BIZUM ENVIADO/RECIBIDO/A FAVOR DE") como el inglés que BBVA imprime en
+  // la etiqueta del subtipo ("Bizum payment/received"), que el motor concatena
+  // al texto normalizado para que estos patrones casen.
+  { pattern: "\\bBIZUM\\b", category: "Bizum", subtype: "transferencia", priority: 9 },
 
   // Suministros / telefonía / seguros (recibos domiciliados)
-  { pattern: "ENERGIA XXI|\\bENDESA\\b|IBERDROLA|NATURGY|\\bENI\\b|REPSOL LUZ|HIDRALIA|AQUALIA|CANAL ISABEL|EMASESA|AGUAS DE|\\bEMACSA\\b", category: "Suministros", subtype: "recibo", priority: 10 },
-  { pattern: "DIGI SPAIN|MOVISTAR|VODAFONE|ORANGE|JAZZTEL|PEPEPHONE|O2 ", category: "Telefonía e Internet", subtype: "recibo", priority: 10 },
-  { pattern: "VERTI|MUTUA MADRILE|MAPFRE|ALLIANZ|AXA |LINEA DIRECTA|REALE |GENERALI|SANITAS|ADESLAS|ASISA", category: "Seguros", subtype: "recibo", priority: 10 },
+  { pattern: "ENERGIA XXI|\\bENDESA\\b|IBERDROLA|NATURGY|\\bENI\\b|REPSOL LUZ|HIDRALIA|AQUALIA|CANAL ISABEL|EMASESA|AGUAS DE|\\bEMACSA\\b|HOLALUZ|TOTALENERGIES|OCTOPUS ENERGY|\\bAQUONA\\b", category: "Suministros", subtype: "recibo", priority: 10 },
+  { pattern: "DIGI SPAIN|MOVISTAR(?! ?PLUS)|VODAFONE|ORANGE|JAZZTEL|PEPEPHONE|O2 |MASMOVIL|FINETWORK|AVATEL|YOIGO|\\bLOWI\\b|\\bSIMYO\\b", category: "Telefonía e Internet", subtype: "recibo", priority: 10 },
+  { pattern: "VERTI|MUTUA MADRILE|MAPFRE|ALLIANZ|AXA |LINEA DIRECTA|REALE |GENERALI|SANITAS|ADESLAS|ASISA|PLAN ESTARSEGURO", category: "Seguros", subtype: "recibo", priority: 10 },
   { pattern: "AYUNTAMIENTO DE MADRID|AYTO.?MADRID|AYTO MADRID", category: "Impuestos y Tasas", priority: 10 },
   // Impuestos / Seguridad Social (Hacienda, autónomos)
   { pattern: "A\\.?E\\.?A\\.?T|AGENCIA TRIBUTARIA|\\bHACIENDA\\b|\\bAUTONOMOS\\b|SEGURIDAD SOCIAL|\\bTGSS\\b|\\bRETA\\b|TASA |IMPUESTO", category: "Impuestos y Tasas", subtype: "recibo", priority: 11 },
   // Comisión de mantenimiento de cuenta
-  { pattern: "^MANTENIMIENTO|COMISION MANTEN|MANTENIMIENTO CUENTA|COM\\.?\\s?MANTO", category: "Comisiones bancarias", subtype: "comision", priority: 44 },
+  { pattern: "^MANTENIMIENTO|COMISION MANTEN|MANTENIMIENTO CUENTA|COM\\.?\\s?MANTO|MANTENIMIENTO TARJETA|CUSTODIA|COMISION TRANSFER|\\bSWIFT\\b|FEES,?EXPENSES AND INTEREST PAID", category: "Comisiones bancarias", subtype: "comision", priority: 44 },
   // Devoluciones de Hacienda (ingreso)
   { pattern: "DEVOLUCION(ES)? TRIBUTARIA|DEVOLUCION RENTA|ABONO A\\.?E\\.?A\\.?T", category: "Devoluciones y Abonos", subtype: "abono", priority: 11 },
 
   // Supermercados / alimentación
   {
     pattern:
-      "MERCADONA|AHORRAMAS|\\bALDI\\b|\\bLIDL\\b|ALCAMPO|CARREF|\\bDIA \\b|DIA \\d|SUPECO|EL GUSTO|LA DESPENSA|AHORRAMAS SA|GRUPO (SUP )?AHORRAMAS|NAHAR FRUTERIA|FRUTERIA|CARNICERIA|HIPER SAN FERNANDO|LA SIRENA|BODEGON|MARKET JULIAN ROMEA|ALIMENTACION|SUMINISTROS ALCALARE",
+      "MERCADONA|AHORRAMAS|\\bALDI\\b|\\bLIDL\\b|ALCAMPO|CARREF|\\bDIA \\b|DIA \\d|SUPECO|EL GUSTO|LA DESPENSA|AHORRAMAS SA|GRUPO (SUP )?AHORRAMAS|NAHAR FRUTERIA|FRUTERIA|CARNICERIA|HIPER SAN FERNANDO|LA SIRENA|BODEGON|MARKET JULIAN ROMEA|ALIMENTACION|SUMINISTROS ALCALARE|CONSUM|EROSKI|BONPREU|COVIRAN|OPENCOR|\\bSPAR\\b|HIPERCOR|\\bBM\\b|FROIZ|EL CORTE INGLES SUPERMERCADO|PANADERIA|PRIMAPRIX|LEVADURA MADRE",
     category: "Supermercado",
     priority: 20,
   },
 
-  // Restauración / comida rápida
+  // Restauración / comida rápida (incluye delivery)
   {
     pattern:
-      "\\bKFC\\b|BK\\d|BURGER|DOMINO|SUBWAY|TIKI TACO|PAPA JOHNS|ROYAL KEBAP|RESTAURANTE|\\bBAR \\b|BAR FLAMENCO|BAR LEON|ASADOR|FREIDOR|EL FOGON|SUPER POLLO|TAPAS Y COPAS|TABITAS|SALON ITALIANO|MANDUCARE|EUREST|DELIKIA|GANOSA|HELAOTAI|IPANEMA|SUKAO|ANDARRIO|PLATERO|FEVER",
+      "\\bKFC\\b|BK\\d|BURGER|DOMINO|SUBWAY|TIKI TACO|PAPA JOHNS|ROYAL KEBAP|RESTAURANTE|\\bBAR \\b|BAR FLAMENCO|BAR LEON|ASADOR|FREIDOR|EL FOGON|SUPER POLLO|TAPAS Y COPAS|TABITAS|SALON ITALIANO|MANDUCARE|EUREST|DELIKIA|GANOSA|HELAOTAI|IPANEMA|SUKAO|ANDARRIO|PLATERO|FEVER|CAFETERIA|PIZZ|MCDONALD|STARBUCKS|TELEPIZZA|\\bWOK\\b|GOIKO|100 MONTADITOS|GLOVO|UBER ?EATS|JUST ?EAT|DELIVEROO|RODILLA|\\bVIPS\\b|TACO BELL|SUSHI|JOLLIBEE|INASAL|HELADERIA|KIOSKO DE HELADOS|LA PI[ÑN]ATA|KEBAB|FRESCCO|MONTADITOS",
     category: "Restauración",
     priority: 25,
   },
@@ -113,7 +122,7 @@ export const RULES: RuleSeed[] = [
   // Combustible / gasolineras
   {
     pattern:
-      "PLENERGY|PLENOIL|CEDIPSA|ATENOIL|BALLENOIL|TALOIL|MOEVE|PETROPRIX|GESLAMA|SURTIMOVIL|E\\. ?S\\.|EESS|E S ALCAMPO|ES MARIA AUXIL|PK SAN ANTONIO|GASOLINERA|US\\d+ PLEN|PLENOIL US",
+      "PLENERGY|PLENOIL|CEDIPSA|ATENOIL|BALLENOIL|TALOIL|MOEVE|PETROPRIX|GESLAMA|SURTIMOVIL|E\\. ?S\\.|EESS|E S ALCAMPO|ES MARIA AUXIL|PK SAN ANTONIO|GASOLINERA|US\\d+ PLEN|PLENOIL US|\\bGALP\\b|\\bBP\\b|\\bSHELL\\b|\\bCEPSA\\b|\\bAVIA\\b",
     category: "Combustible",
     priority: 30,
   },
@@ -139,27 +148,29 @@ export const RULES: RuleSeed[] = [
   // Mascotas
   { pattern: "KIWOKO|VETERINARIA|ANICURA|ANIMARI|MASCOTA", category: "Mascotas", priority: 30 },
 
-  // Transporte público
+  // Transporte público + VTC + micromovilidad
   {
-    pattern: "APP CRTM|\\bCRTM\\b|METRO DE MADRID|RENFE|MADRID SUR MOVILIDAD|CERCANIAS|EUROPCAR|CENTAURO|\\bSIXT\\b",
+    pattern:
+      "APP CRTM|\\bCRTM\\b|METRO DE MADRID|RENFE|MADRID SUR MOVILIDAD|CERCANIAS|EUROPCAR|CENTAURO|\\bSIXT\\b|\\bUBER\\b(?! ?EATS)|CABIFY|\\bBOLT\\b|FREE ?NOW|\\bLIME\\b|\\bTIER\\b|\\bDOTT\\b|\\bVOI\\b|EMT MADRID|\\bEMT\\b|BICIMAD",
     category: "Transporte",
     priority: 30,
   },
 
-  // Salud / farmacia
-  { pattern: "FARMACIA|FCIA |ANICURA", category: "Salud y Farmacia", priority: 30 },
+  // Salud / farmacia (incluye perfumerías/parafarmacia tipo Druni)
+  { pattern: "FARMACIA|FCIA |\\bDENTAL\\b|CLINICA|HOSPITAL|\\bOPTICA\\b|\\bAUDIFONOS\\b|\\bDRUNI\\b", category: "Salud y Farmacia", priority: 30 },
 
   // Ocio y digital / suscripciones / juegos
   {
     pattern:
-      "STEAM|BLIZZARD|INSTANT GAMING|\\bGITHUB\\b|ANTHROPIC|CLAUDE|NUVERSE|SPOTIFY|NETFLIX|AMAZON PRIME|HP\\*INSTANT|GROUPON|ATLANTIS AQUARIUM|KINEPOLIS|AYTO MADRID DEPORTES|AYTO\\.?MADRID-DEPORTES|DEPORTES|P DEPORTIVO",
+      "STEAM|BLIZZARD|INSTANT GAMING|\\bGITHUB\\b|ANTHROPIC|CLAUDE|NUVERSE|SPOTIFY|NETFLIX|AMAZON PRIME|HP\\*INSTANT|GROUPON|ATLANTIS AQUARIUM|KINEPOLIS|AYTO MADRID DEPORTES|AYTO\\.?MADRID-DEPORTES|DEPORTES|P DEPORTIVO|OPENAI|\\bNOTION\\b|\\bADOBE\\b|FIGMA|MICROSOFT|\\bMSFT\\b|GOOGLE (?:ONE|WORKSPACE|PLAY|YOUTUBE)|YOUTUBE|ICLOUD|ITUNES|DROPBOX|DISCORD|PATREON|TWITCH|\\bHBO\\b|MAX(?:HBO)?|DISNEY\\+?|DAZN|FILMIN|MOVISTAR ?PLUS|EPIC GAMES|NINTENDO|PLAYSTATION|\\bPSN\\b|XBOX|APPLE\\.COM[\\/ ]?BILL|\\bBINGO\\b",
     category: "Ocio y Digital",
     priority: 35,
   },
 
   // Ropa
   {
-    pattern: "GUESS|UNIQLO|PRIMARK|FIFTY FACTORY|KIABI|SKECHERS|ALVARO MORENO|DECATHLON|HUMANA",
+    pattern:
+      "GUESS|UNIQLO|PRIMARK|FIFTY FACTORY|KIABI|SKECHERS|ALVARO MORENO|DECATHLON|HUMANA|\\bZARA\\b|H&M|\\bH ?M\\b|SHEIN|BERSHKA|PULL ?[&Y]? ?BEAR|STRADIVARIUS|MASSIMO DUTTI|\\bNIKE\\b|ADIDAS|FOOT ?LOCKER|JD ?SPORTS|\\bMANGO\\b|LEFTIES|CALZADOS|CRAZYDAY|MIKASA",
     category: "Ropa",
     priority: 35,
   },
@@ -172,7 +183,7 @@ export const RULES: RuleSeed[] = [
 
   // Compras y tecnología / online
   {
-    pattern: "AMAZON|AMZN|ALIEXPRESS|\\bTEMU\\b|LENOVO|APPLE STORE|WWW\\.MI\\.COM|SP EU SIHOO|SIHOO|MONDELEZ|CARREFOUR TECNOL|TELEFONICA CORNER",
+    pattern: "AMAZON|AMZN|ALIEXPRESS|\\bTEMU\\b|LENOVO|APPLE STORE|WWW\\.MI\\.COM|SP EU SIHOO|SIHOO|MONDELEZ|CARREFOUR TECNOL|TELEFONICA CORNER|PC ?COMPONENTES|\\bWORTEN\\b|\\bFNAC\\b|EL CORTE INGLES",
     category: "Compras y Tecnología",
     priority: 40,
   },
@@ -183,15 +194,18 @@ export const RULES: RuleSeed[] = [
   // Ingresos (palabras genéricas; las nóminas por nombre de empresa se pueden
   // afinar con reglas propias editables dentro de la app, no en el código).
   {
-    pattern: "PAGO NOMINA|\\bNOMINA\\b|SUELDO|SALAR|FINIQ",
+    pattern: "PAGO NOMINA|\\bNOMINA\\b|SUELDO|SALAR|FINIQ|DEPOSIT FROM SALARY OR PENSION",
     category: "Nómina",
     subtype: "nomina",
     priority: 15,
   },
   { pattern: "LIQUIDACION CUENTA", category: "Intereses", subtype: "interes", priority: 12 },
   { pattern: "BONIFICACION SOBRE EL IMPORTE", category: "Devoluciones y Abonos", subtype: "abono", priority: 12 },
-  { pattern: "ABONO EN LA TARJETA|REGULARIZACION|DEVOLUCION IMPORTE|UBER B\\.V\\.", category: "Devoluciones y Abonos", subtype: "abono", priority: 50 },
+  { pattern: "ABONO EN LA TARJETA|REGULARIZACION|DEVOLUCION IMPORTE|UBER B\\.V\\.|ABONO TRANSFERENCIA|\\bREINTEGRO\\b(?! EN CAJERO)|\\bDEVUELTO\\b", category: "Devoluciones y Abonos", subtype: "abono", priority: 50 },
   // Ingreso de efectivo = dinero propio que se mete en la cuenta; se trata como
   // movimiento interno (no es un ingreso real, no computa en la tasa de ahorro).
-  { pattern: "INGRESO DE EFECTIVO", category: "Traspaso interno", priority: 8 },
+  // Lo mismo para los movimientos entre la cuenta corriente y la tarjeta de
+  // crédito BBVA (Funded card operation, Monthly card debit, Transfer from card,
+  // Cash deposit), que en realidad son traslados internos del propio dinero.
+  { pattern: "INGRESO DE EFECTIVO|FUNDED CARD OPERATION|MONTHLY CARD DEBIT|TRANSFER FROM CARD|CASH DEPOSIT", category: "Traspaso interno", priority: 8 },
 ];

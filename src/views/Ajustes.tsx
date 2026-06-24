@@ -11,7 +11,7 @@ import { formatEUR } from "../lib/format";
 import type { Account } from "../types";
 
 export function Ajustes() {
-  const { reload, palette, setPalette } = useApp();
+  const { reload, palette, setPalette, toast } = useApp();
   const [owner, setOwner] = useState("");
   const [accounts, setAccounts] = useState<Array<Account & { balance: number }>>([]);
   const [confirming, setConfirming] = useState(false);
@@ -39,12 +39,24 @@ export function Ajustes() {
 
   async function wipe() {
     setWiping(true);
-    await resetData();
-    setConfirming(false);
-    setWiping(false);
-    setOwner("");
-    loadAccounts();
-    reload();
+    try {
+      await resetData();
+      setConfirming(false);
+      setOwner("");
+      loadAccounts();
+      reload();
+    } catch (e) {
+      const msg =
+        e instanceof Error && e.message
+          ? e.message
+          : typeof e === "string"
+            ? e
+            : JSON.stringify(e);
+      toast(`Error al borrar: ${msg}`);
+      console.error("resetData failed:", e);
+    } finally {
+      setWiping(false);
+    }
   }
 
   return (

@@ -71,6 +71,8 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
   const [valueById, setValueById] = useState<Map<number, number>>(new Map());
   // Pila de drill-down: ids de categorías padre por las que se ha ido entrando.
   const [stack, setStack] = useState<number[]>([]);
+  // Categorías ocultadas desde la leyenda (clic en la lista de la derecha).
+  const [hidden, setHidden] = useState<Set<number>>(new Set());
   // Rango de fechas propio del widget (sobrescribe el global si se usa).
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const { colors, override, setOverride } = useChartPalette(p.widgetKey);
@@ -81,8 +83,18 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
     void spendByCategoryId(scope({ ...p, from, to })).then((rows) => {
       setValueById(new Map(rows.map((r) => [r.id, r.value])));
       setStack([]); // al cambiar filtros/datos, vuelve a la vista de padres
+      setHidden(new Set()); // y también limpia las categorías ocultadas
     });
   }, [p.accountId, from, to, p.excludeInternal, p.version]);
+
+  const toggleHidden = (id: number) => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const parentId = stack.length ? stack[stack.length - 1] : null;
   const slices = useMemo(
@@ -120,7 +132,14 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
         )}
       </div>
       <div className="widget-body">
-        <NivoDonut slices={slices} centerLabel={centerLabel} onSlice={onSlice} palette={colors} />
+        <NivoDonut
+          slices={slices}
+          centerLabel={centerLabel}
+          onSlice={onSlice}
+          palette={colors}
+          hiddenIds={hidden}
+          onToggleId={toggleHidden}
+        />
       </div>
       {p.headerSlot &&
         createPortal(

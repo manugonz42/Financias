@@ -63,6 +63,8 @@ export const SCHEMA: string[] = [
      merchant TEXT,
      card_last4 TEXT,
      is_internal INTEGER NOT NULL DEFAULT 0,
+     manual_category INTEGER NOT NULL DEFAULT 0, -- 1 = el usuario asignó la categoría manualmente
+     bank_subtype_label TEXT,            -- etiqueta del banco (BBVA: "Card payment"…) si la separamos del concepto
      source_file TEXT,
      import_batch_id INTEGER,
      dedupe_key TEXT NOT NULL UNIQUE,

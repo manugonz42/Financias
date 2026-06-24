@@ -48,6 +48,10 @@ export interface ParsedTransaction {
   importe: number;
   /** Saldo resultante según el extracto. */
   saldo: number;
+  /** Etiqueta del subtipo que algunos bancos imprimen al lado del comercio
+   *  (p.ej. BBVA: "Card payment", "Direct debit", "Bizum payment"). Se separa
+   *  para no contaminar el concepto y para inferir mejor el subtipo. */
+  bankSubtypeLabel?: string;
 }
 
 export interface ParsedStatement {

@@ -10,6 +10,7 @@ import {
   type PdfPage,
 } from "../src/import/openbankParser";
 import { parseUnicajaStatement, isUnicajaStatement } from "../src/import/unicajaParser";
+import { parseBbvaStatement } from "../src/import/bbvaParser";
 import { categorize, compileRules } from "../src/import/categorize";
 
 const require = createRequire(import.meta.url);
@@ -109,6 +110,117 @@ maybe("Parser de extractos Openbank (PDFs reales)", () => {
       "PEREZ GARCIA JUAN",
     );
     expect(other.isInternal).toBe(false);
+  });
+});
+
+describe("Parser BBVA (tokens sintéticos)", () => {
+  // El PDF real de BBVA contiene PII y no se versiona. Reproducimos su layout
+  // (filas en 2 niveles verticales: cabecera con fecha+importe+saldo y línea
+  // inferior con "Value date" + etiqueta del subtipo en inglés) con tokens
+  // posicionados a mano para validar la extracción de bankSubtypeLabel.
+  function row(
+    yTop: number,
+    op: string,
+    val: string,
+    merchantTokens: Array<[string, number]>,
+    labelTokens: Array<[string, number]>,
+    importe: string,
+    saldo: string,
+  ) {
+    const tokens: Array<{ str: string; x: number; y: number }> = [];
+    tokens.push({ str: op, x: 30, y: yTop });
+    for (const [s, x] of merchantTokens) tokens.push({ str: s, x, y: yTop });
+    tokens.push({ str: importe, x: 500, y: yTop });
+    tokens.push({ str: saldo, x: 600, y: yTop });
+    const yBot = yTop - 12;
+    tokens.push({ str: "Value", x: 30, y: yBot });
+    tokens.push({ str: "date", x: 45, y: yBot });
+    tokens.push({ str: val, x: 60, y: yBot });
+    for (const [s, x] of labelTokens) tokens.push({ str: s, x, y: yBot });
+    return tokens;
+  }
+
+  it("separa Card payment del concepto", () => {
+    const page = row(
+      700,
+      "13/06/2026",
+      "13/06/2026",
+      [["MERCADONA", 120], ["EJEMPLO", 175]],
+      [["Card", 250], ["payment", 280]],
+      "-9,99 €",
+      "100,00 €",
+    );
+    const { transactions } = parseBbvaStatement([page]);
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0].bankSubtypeLabel).toBe("Card payment");
+    expect(transactions[0].concepto).toBe("MERCADONA EJEMPLO");
+    expect(transactions[0].importe).toBe(-9.99);
+  });
+
+  it("separa Direct debit y Bizum payment", () => {
+    const direct = row(
+      700,
+      "01/06/2026",
+      "01/06/2026",
+      [["ENDESA", 120]],
+      [["Direct", 250], ["debit", 290]],
+      "-52,30 €",
+      "200,00 €",
+    );
+    const bizum = row(
+      660,
+      "02/06/2026",
+      "02/06/2026",
+      [["MARIA", 120], ["LOPEZ", 170]],
+      [["Bizum", 250], ["payment", 290]],
+      "-15,00 €",
+      "185,00 €",
+    );
+    const { transactions } = parseBbvaStatement([[...direct, ...bizum]]);
+    expect(transactions).toHaveLength(2);
+    expect(transactions[0].bankSubtypeLabel).toBe("Direct debit");
+    expect(transactions[0].concepto).toBe("ENDESA");
+    expect(transactions[1].bankSubtypeLabel).toBe("Bizum payment");
+    expect(transactions[1].concepto).toBe("MARIA LOPEZ");
+  });
+
+  it("separa Bizum suelto, Others, Deposit from salary y Transfer from card", () => {
+    const bizum = row(
+      700, "08/06/2026", "07/06/2026",
+      [["ENVIADO:", 120], ["Food", 165], ["payment", 200]],
+      [["Bizum", 250]],
+      "-7,00 €", "100,00 €",
+    );
+    const others = row(
+      660, "04/06/2026", "04/06/2026",
+      [["Bbva", 120], ["plan", 150], ["estarseguro", 180]],
+      [["Others", 250]],
+      "-17,22 €", "82,78 €",
+    );
+    const salary = row(
+      620, "01/06/2026", "01/06/2026",
+      [["Recibido:", 120], ["paga", 170]],
+      [["Deposit", 250], ["from", 285], ["salary", 310], ["or", 345], ["pension", 360]],
+      "1500,00 €", "1582,78 €",
+    );
+    const tfc = row(
+      580, "25/05/2026", "25/05/2026",
+      [["Credit-", 120], ["transfer", 155], ["from", 190], ["credit", 215], ["card", 240]],
+      [["Transfer", 280], ["from", 320], ["card", 345]],
+      "150,00 €", "1732,78 €",
+    );
+    const { transactions } = parseBbvaStatement([
+      [...bizum, ...others, ...salary, ...tfc],
+    ]);
+    expect(transactions).toHaveLength(4);
+    expect(transactions[0].bankSubtypeLabel).toBe("Bizum");
+    expect(transactions[0].concepto).toBe("ENVIADO: Food payment");
+    expect(transactions[1].bankSubtypeLabel).toBe("Others");
+    // El parser filtra "Bbva" como cabecera de banco (NOISE_RE), así que la
+    // regla de seguros casa sobre "plan estarseguro" sin el prefijo.
+    expect(transactions[1].concepto).toBe("plan estarseguro");
+    expect(transactions[2].bankSubtypeLabel).toBe("Deposit from salary or pension");
+    expect(transactions[3].bankSubtypeLabel).toBe("Transfer from card");
   });
 });
 

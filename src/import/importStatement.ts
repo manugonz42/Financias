@@ -78,9 +78,9 @@ export async function importStatementFromBytes(
     const res = await db.execute(
       `INSERT INTO transactions
          (account_id, fecha_operacion, fecha_valor, concepto, importe, saldo,
-          category_id, subtype, merchant, card_last4, is_internal, source_file,
-          import_batch_id, dedupe_key)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          category_id, subtype, merchant, card_last4, is_internal,
+          bank_subtype_label, source_file, import_batch_id, dedupe_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(dedupe_key) DO NOTHING`,
       [
         accountId,
@@ -94,6 +94,7 @@ export async function importStatementFromBytes(
         f.merchant,
         f.cardLast4,
         f.isInternal ? 1 : 0,
+        tx.bankSubtypeLabel ?? null,
         filename,
         batchId,
         key,

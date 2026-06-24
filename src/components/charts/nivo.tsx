@@ -99,18 +99,24 @@ export function NivoDonut({
   centerLabel,
   onSlice,
   palette,
+  hiddenIds,
+  onToggleId,
 }: {
   slices: DonutSlice[];
   centerLabel?: string;
   onSlice?: (id: number) => void;
   /** Si se pasa, pinta cada porción por índice; si es null/undefined, color de cada categoría. */
   palette?: string[] | null;
+  /** Si se proporciona junto con onToggleId, el rosco filtra estas categorías
+   *  del gráfico y renderiza una leyenda JSX a la derecha clicable. */
+  hiddenIds?: Set<number>;
+  onToggleId?: (id: number) => void;
 }) {
   const theme = useNivoTheme();
   const text = cssVar("--text", "#e2e8f0");
-  const total = slices.reduce((s, x) => s + x.value, 0) || 1;
 
-  const data: PieDatum[] = slices.map((s, i) => ({
+  // Datos completos para la leyenda; los visibles para el gráfico.
+  const allData: PieDatum[] = slices.map((s, i) => ({
     id: String(s.id),
     catId: s.id,
     label: s.name,
@@ -118,6 +124,11 @@ export function NivoDonut({
     color: palette && palette.length ? palette[i % palette.length] : s.color,
     drillable: s.drillable,
   }));
+  const interactive = !!onToggleId;
+  const data = interactive
+    ? allData.filter((d) => !hiddenIds?.has(d.catId))
+    : allData;
+  const total = data.reduce((s, x) => s + x.value, 0) || 1;
 
   const CenterLabel = ({ centerX, centerY }: { centerX: number; centerY: number }) =>
     centerLabel ? (
@@ -126,55 +137,129 @@ export function NivoDonut({
       </text>
     ) : null;
 
+  const pie = (
+    <ResponsivePie
+      data={data}
+      theme={theme}
+      margin={{ top: 16, right: interactive ? 16 : 120, bottom: 16, left: 16 }}
+      innerRadius={0.6}
+      padAngle={0.3}
+      cornerRadius={2}
+      activeOuterRadiusOffset={8}
+      colors={{ datum: "data.color" }}
+      borderWidth={1.5}
+      borderColor={{ from: "color", modifiers: [["darker", 0.5]] }}
+      enableArcLabels={false}
+      enableArcLinkLabels={false}
+      motionConfig="gentle"
+      transitionMode="pushIn"
+      layers={["arcs", "arcLabels", "arcLinkLabels", "legends", CenterLabel]}
+      legends={
+        interactive
+          ? []
+          : [
+              {
+                anchor: "right",
+                direction: "column",
+                justify: false,
+                translateX: 110,
+                itemsSpacing: 4,
+                itemWidth: 100,
+                itemHeight: 18,
+                itemTextColor: cssVar("--text-dim", "#94a3b8"),
+                symbolSize: 10,
+                symbolShape: "circle",
+              },
+            ]
+      }
+      onClick={(node) => {
+        const d = node.data as unknown as PieDatum;
+        if (d.drillable) onSlice?.(d.catId);
+      }}
+      tooltip={({ datum }) => {
+        const d = datum.data as unknown as PieDatum;
+        const pct = ((d.value / total) * 100).toFixed(1);
+        return (
+          <Tip>
+            <Swatch color={datum.color} />
+            {d.label} · <b>{formatEUR(d.value)}</b> ({pct}%)
+            {d.drillable && <span style={{ opacity: 0.6 }}> · clic para abrir</span>}
+          </Tip>
+        );
+      }}
+    />
+  );
+
+  if (!interactive) return <Fill>{pie}</Fill>;
+
   return (
-    <Fill>
-      <ResponsivePie
-        data={data}
-        theme={theme}
-        margin={{ top: 16, right: 120, bottom: 16, left: 16 }}
-        innerRadius={0.6}
-        padAngle={0.3}
-        cornerRadius={2}
-        activeOuterRadiusOffset={8}
-        colors={{ datum: "data.color" }}
-        borderWidth={1.5}
-        borderColor={{ from: "color", modifiers: [["darker", 0.5]] }}
-        enableArcLabels={false}
-        enableArcLinkLabels={false}
-        motionConfig="gentle"
-        transitionMode="pushIn"
-        layers={["arcs", "arcLabels", "arcLinkLabels", "legends", CenterLabel]}
-        legends={[
-          {
-            anchor: "right",
-            direction: "column",
-            justify: false,
-            translateX: 110,
-            itemsSpacing: 4,
-            itemWidth: 100,
-            itemHeight: 18,
-            itemTextColor: cssVar("--text-dim", "#94a3b8"),
-            symbolSize: 10,
-            symbolShape: "circle",
-          },
-        ]}
-        onClick={(node) => {
-          const d = node.data as unknown as PieDatum;
-          if (d.drillable) onSlice?.(d.catId);
+    <div style={{ display: "flex", height: "100%", width: "100%", gap: 8 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>{pie}</div>
+      <ul
+        style={{
+          listStyle: "none",
+          margin: 0,
+          padding: 0,
+          width: 130,
+          overflowY: "auto",
+          fontSize: 12,
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
         }}
-        tooltip={({ datum }) => {
-          const d = datum.data as unknown as PieDatum;
-          const pct = ((d.value / total) * 100).toFixed(1);
+      >
+        {allData.map((d) => {
+          const hidden = !!hiddenIds?.has(d.catId);
           return (
-            <Tip>
-              <Swatch color={datum.color} />
-              {d.label} · <b>{formatEUR(d.value)}</b> ({pct}%)
-              {d.drillable && <span style={{ opacity: 0.6 }}> · clic para abrir</span>}
-            </Tip>
+            <li key={d.id}>
+              <button
+                type="button"
+                onClick={() => onToggleId?.(d.catId)}
+                title={
+                  hidden
+                    ? `Mostrar ${d.label}`
+                    : `Ocultar ${d.label} del rosco`
+                }
+                style={{
+                  all: "unset",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "2px 4px",
+                  width: "100%",
+                  borderRadius: 4,
+                  opacity: hidden ? 0.4 : 1,
+                  textDecoration: hidden ? "line-through" : "none",
+                }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    display: "inline-block",
+                    width: 10,
+                    height: 10,
+                    borderRadius: 3,
+                    background: d.color,
+                    flexShrink: 0,
+                  }}
+                />
+                <span
+                  style={{
+                    color: "var(--text-dim, #94a3b8)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {d.label}
+                </span>
+              </button>
+            </li>
           );
-        }}
-      />
-    </Fill>
+        })}
+      </ul>
+    </div>
   );
 }
 

@@ -90,6 +90,19 @@ async function migrate(db: Database): Promise<void> {
   if (!txCols.some((c) => c.name === "receipt_path")) {
     await db.execute("ALTER TABLE transactions ADD COLUMN receipt_path TEXT");
   }
+  // manual_category en transactions: 1 = el usuario asignó la categoría a mano
+  // (vía la vista Categorizar). Sirve para poder revertirla en bloque.
+  if (!txCols.some((c) => c.name === "manual_category")) {
+    await db.execute(
+      "ALTER TABLE transactions ADD COLUMN manual_category INTEGER NOT NULL DEFAULT 0",
+    );
+  }
+  // bank_subtype_label en transactions: etiqueta del banco que el parser separa
+  // del concepto (BBVA: "Card payment", "Bizum", "Direct debit"…). Persistirla
+  // permite que la re-clasificación posterior la siga viendo y casar reglas.
+  if (!txCols.some((c) => c.name === "bank_subtype_label")) {
+    await db.execute("ALTER TABLE transactions ADD COLUMN bank_subtype_label TEXT");
+  }
 }
 
 /** Helper de selección tipada. */
@@ -108,14 +121,41 @@ export async function exec(sql: string, params: unknown[] = []) {
 }
 
 /**
- * Borra todos los datos importados (movimientos, lotes y cuentas) y el titular
- * detectado, dejando la app como recién instalada. Conserva categorías, reglas,
- * presupuestos y el layout del dashboard.
+ * Borra todos los datos importados (movimientos, splits, líneas de recibo,
+ * recibos pendientes, saldos manuales, lotes y cuentas) y el titular detectado,
+ * dejando la app como recién instalada. Conserva categorías, reglas,
+ * presupuestos y el layout del dashboard. Orden de borrado de hijos a padres
+ * para evitar quedarse pillado si en el futuro se activan foreign keys. Si
+ * alguna tabla no existe en una BD muy antigua, se ignora y continúa con el
+ * resto en vez de abortar la operación entera.
  */
 export async function resetData(): Promise<void> {
   const db = await getDB();
-  await db.execute("DELETE FROM transactions");
-  await db.execute("DELETE FROM import_batches");
-  await db.execute("DELETE FROM accounts");
-  await db.execute("DELETE FROM settings WHERE key = 'owner_name'");
+  const tables = [
+    "transaction_splits",
+    "receipt_items",
+    "pending_receipts",
+    "account_balances",
+    "transactions",
+    "import_batches",
+    "accounts",
+  ];
+  const errors: string[] = [];
+  for (const t of tables) {
+    try {
+      await db.execute(`DELETE FROM ${t}`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/no such table/i.test(msg)) errors.push(`${t}: ${msg}`);
+    }
+  }
+  try {
+    await db.execute("DELETE FROM settings WHERE key = 'owner_name'");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    errors.push(`settings: ${msg}`);
+  }
+  if (errors.length > 0) {
+    throw new Error(`No se pudo borrar todo: ${errors.join("; ")}`);
+  }
 }
