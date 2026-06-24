@@ -147,12 +147,20 @@ export function NivoDonut({
         theme={theme}
         margin={{ top: 16, right: 120, bottom: 16, left: 16 }}
         innerRadius={0.6}
-        padAngle={1}
-        cornerRadius={4}
+        padAngle={0.3}
+        cornerRadius={2}
         activeOuterRadiusOffset={8}
         colors={{ datum: "data.color" }}
-        borderWidth={2}
+        borderWidth={1}
         borderColor={card}
+        defs={[
+          linearGradientDef("sliceShade", [
+            { offset: 0, color: "inherit:brighter(0.7)" },
+            { offset: 55, color: "inherit" },
+            { offset: 100, color: "inherit:darker(0.9)" },
+          ]),
+        ]}
+        fill={[{ match: "*", id: "sliceShade" }]}
         enableArcLabels={false}
         enableArcLinkLabels={false}
         motionConfig="gentle"
@@ -270,7 +278,7 @@ const GlowLine = ({ series, lineGenerator }: any) =>
       strokeWidth={2.25}
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ filter: "drop-shadow(0 1px 5px rgba(99,102,241,0.45))" }}
+      style={{ filter: "drop-shadow(0 1px 5px rgba(94,106,210,0.5))" }}
     />
   ));
 
@@ -426,6 +434,14 @@ export function NivoSunburst({ root }: { root: SunburstNode }) {
         borderWidth={2}
         colors={(node: any) => node.data?.color ?? "#888"}
         inheritColorFromParent={false}
+        defs={[
+          linearGradientDef("sliceShade", [
+            { offset: 0, color: "inherit:brighter(0.7)" },
+            { offset: 55, color: "inherit" },
+            { offset: 100, color: "inherit:darker(0.9)" },
+          ]),
+        ]}
+        fill={[{ match: "*", id: "sliceShade" }]}
         enableArcLabels={false}
         motionConfig="gentle"
         transitionMode="pushIn"

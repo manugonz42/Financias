@@ -319,6 +319,46 @@ const SunburstBody: FC<WidgetProps> = (p) => {
   return <NivoSunburst root={root} />;
 };
 
+const MonthCompareBody: FC<WidgetProps> = (p) => {
+  const [data, setData] = useState<{ now: number; prev: number } | null>(null);
+  useEffect(() => {
+    const d = new Date();
+    const ym = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const thisM = ym(d);
+    const prevM = ym(new Date(d.getFullYear(), d.getMonth() - 1, 1));
+    const base = { accountId: p.accountId, excludeInternal: p.excludeInternal };
+    void Promise.all([kpis({ ...base, month: thisM }), kpis({ ...base, month: prevM })]).then(
+      ([a, b]) => setData({ now: a.expense, prev: b.expense }),
+    );
+  }, [p.accountId, p.excludeInternal, p.version]);
+
+  if (!data) return <span className="muted">…</span>;
+  const delta = data.prev > 0 ? ((data.now - data.prev) / data.prev) * 100 : 0;
+  const up = data.now > data.prev; // gastar más que el mes pasado = peor
+  return (
+    <div className="flex h-full flex-col justify-center gap-4">
+      <div>
+        <div className="text-xs text-muted-foreground">Gasto este mes</div>
+        <div className="font-mono text-3xl font-bold tabular-nums text-foreground">{formatEUR(data.now)}</div>
+      </div>
+      <div className="flex items-end gap-2">
+        <div>
+          <div className="text-xs text-muted-foreground">Mes pasado</div>
+          <div className="font-mono text-lg tabular-nums text-muted-foreground">{formatEUR(data.prev)}</div>
+        </div>
+        {data.prev > 0 && (
+          <span
+            className="ml-auto font-mono text-sm font-semibold tabular-nums"
+            style={{ color: up ? "var(--bad)" : "var(--good)" }}
+          >
+            {up ? "▲" : "▼"} {Math.abs(delta).toFixed(0)}%
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export interface WidgetDef {
   key: string;
   title: string;
@@ -330,6 +370,7 @@ export interface WidgetDef {
 export const WIDGETS: WidgetDef[] = [
   { key: "donut", title: "Gasto por categoría", w: 8, h: 10, Body: CategoryDonutBody },
   { key: "kpis", title: "Resumen del periodo", w: 4, h: 4, Body: KpiBody },
+  { key: "monthcompare", title: "Gasto: mes pasado vs este mes", w: 4, h: 4, Body: MonthCompareBody },
   { key: "networth", title: "Patrimonio neto", w: 4, h: 4, Body: NetWorthBody },
   { key: "bars", title: "Gastos vs ingresos por mes", w: 8, h: 8, Body: MonthlyBarsBody },
   { key: "balance", title: "Evolución de saldo / patrimonio", w: 8, h: 8, Body: BalanceLineBody },
