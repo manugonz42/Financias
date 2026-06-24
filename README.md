@@ -58,12 +58,21 @@ npm run tauri build
 - En **macOS** genera `.app` / `.dmg` (en un Mac con Apple Silicon, binario arm64 nativo).
 - En **Windows** genera `.exe` / `.msi`.
 
+Los instaladores quedan en (sustituye `X.Y.Z` por la versión):
+
+```
+src-tauri/target/release/bundle/nsis/Financias_X.Y.Z_x64-setup.exe   # recomendado
+src-tauri/target/release/bundle/msi/Financias_X.Y.Z_x64_en-US.msi
+```
+
 > Tauri **no** compila de Mac a Windows ni viceversa: genera cada binario en su
 > propio sistema operativo (o mediante CI, p.ej. GitHub Actions).
 
 ## 💾 Instalar (Windows)
 
-La Release adjunta dos instaladores. **Usa el `-setup.exe`:**
+Descarga el instalador de la [última Release](https://github.com/manugonz42/Financias/releases/latest)
+(o, si compilas en local, lo encuentras en `src-tauri/target/release/bundle/`).
+Hay dos. **Usa el `-setup.exe`:**
 
 - **`Financias_X.Y.Z_x64-setup.exe`** (NSIS) — **recomendado**. Instala por usuario
   (sin permisos de administrador) en `%LOCALAPPDATA%\Financias\`, ofrece una casilla

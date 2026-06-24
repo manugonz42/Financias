@@ -41,7 +41,7 @@ npm run release       # subir versión + tag (scripts/release.mjs) → dispara C
 ## Mapa del código (`src/`)
 
 - **`import/`** — pipeline de importación:
-  - `loadPdf.ts` (pdf.js → tokens) · `openbankParser.ts` / `unicajaParser.ts`
+  - `loadPdf.ts` (pdf.js → tokens) · `openbankParser.ts` / `unicajaParser.ts` / `bbvaParser.ts`
     (tokens → movimientos; **validado: el saldo encadena**) ·
     `categorize.ts` (categoría/subtipo/comercio/interno) ·
     `importStatement.ts` (orquestador: parseo → dedupe → inserción)
@@ -55,7 +55,7 @@ npm run release       # subir versión + tag (scripts/release.mjs) → dispara C
 - **`views/`** — pantallas (1 por ruta): `Dashboard` · `Movimientos` · `Importar` ·
   `Categorizar` · `Presupuestos` · `Metas` · `Programados` · `Inversiones` (hueco, sin implementar) · `Ajustes`
 - **`widgets/widgets.tsx`** — widgets reordenables del dashboard
-- **`components/`** — UI reutilizable: `CategoryManager` · `Controls` · `EmptyState` ·
+- **`components/`** — UI reutilizable: `CategoryManager` · `ColorPicker` · `Controls` · `EmptyState` ·
   `IconPicker` · `ManualAccounts` · `ReceiptEditor` · `SplitEditor` · `TicketImport` ·
   `UpdateBanner` · `charts/EChart` + `charts/options`
 - **`state/AppContext.tsx`** — estado global · **`types.ts`** — tipos compartidos · **`App.tsx`** — router/layout
