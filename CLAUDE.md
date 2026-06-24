@@ -14,7 +14,8 @@ bancarios reales (usar datos sintéticos). Objetivo: binario nativo Mac (M4) + W
 ## Stack
 
 Tauri v2 (Rust) · React 18 + TypeScript + Vite · SQLite (`@tauri-apps/plugin-sql`)
-· pdf.js (parseo) · ECharts (gráficos) · react-grid-layout + dnd-kit (widgets).
+· pdf.js (parseo) · Nivo (gráficos: @nivo/pie, @nivo/bar, @nivo/line) ·
+react-grid-layout (widgets reordenables/redimensionables) · Tailwind v4 + shadcn/ui (UI).
 
 ## Docs de referencia (leer según la tarea)
 
@@ -57,7 +58,7 @@ npm run release       # subir versión + tag (scripts/release.mjs) → dispara C
 - **`widgets/widgets.tsx`** — widgets reordenables del dashboard
 - **`components/`** — UI reutilizable: `CategoryManager` · `ColorPicker` · `Controls` · `EmptyState` ·
   `IconPicker` · `ManualAccounts` · `ReceiptEditor` · `SplitEditor` · `TicketImport` ·
-  `UpdateBanner` · `charts/EChart` + `charts/options`
+  `UpdateBanner` · `charts/nivo` (rosco/barras/línea con Nivo) · `ui/` (shadcn: button, card…)
 - **`state/AppContext.tsx`** — estado global · **`types.ts`** — tipos compartidos · **`App.tsx`** — router/layout
 
 ## Backend Rust (`src-tauri/src/lib.rs`)
