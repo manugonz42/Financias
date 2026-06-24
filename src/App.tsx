@@ -10,17 +10,26 @@ import { Metas } from "./views/Metas";
 import { Programados } from "./views/Programados";
 import { Inversiones } from "./views/Inversiones";
 import { Ajustes } from "./views/Ajustes";
+import dashboardIcon from "./assets/icons/app/dashboard.png";
+import transaccionesIcon from "./assets/icons/app/transacciones.png";
+import gastosIcon from "./assets/icons/app/gastos.png";
+import presupuestoIcon from "./assets/icons/app/presupuesto.png";
+import metasIcon from "./assets/icons/app/metas.png";
+import calendarioIcon from "./assets/icons/app/calendario.png";
+import inversionesIcon from "./assets/icons/app/inversiones.png";
+import cuentasIcon from "./assets/icons/app/cuentas.png";
+import configuracionIcon from "./assets/icons/app/configuracion.png";
 
 const NAV = [
-  { to: "/", label: "Dashboard", icon: "📊", end: true },
-  { to: "/movimientos", label: "Movimientos", icon: "📋" },
-  { to: "/categorizar", label: "Categorizar", icon: "🏷️" },
-  { to: "/presupuestos", label: "Presupuestos", icon: "🎯" },
-  { to: "/metas", label: "Metas", icon: "🐷" },
-  { to: "/programados", label: "Programados", icon: "📅" },
-  { to: "/inversiones", label: "Inversiones", icon: "📈" },
-  { to: "/importar", label: "Importar", icon: "📥" },
-  { to: "/ajustes", label: "Ajustes", icon: "⚙️" },
+  { to: "/", label: "Dashboard", icon: dashboardIcon, end: true },
+  { to: "/movimientos", label: "Movimientos", icon: transaccionesIcon },
+  { to: "/categorizar", label: "Categorizar", icon: gastosIcon },
+  { to: "/presupuestos", label: "Presupuestos", icon: presupuestoIcon },
+  { to: "/metas", label: "Metas", icon: metasIcon },
+  { to: "/programados", label: "Programados", icon: calendarioIcon },
+  { to: "/inversiones", label: "Inversiones", icon: inversionesIcon },
+  { to: "/importar", label: "Importar", icon: cuentasIcon },
+  { to: "/ajustes", label: "Ajustes", icon: configuracionIcon },
 ];
 
 export default function App() {
@@ -37,7 +46,7 @@ export default function App() {
               end={n.end}
               className={({ isActive }) => (isActive ? "navlink active" : "navlink")}
             >
-              <span>{n.icon}</span>
+              <img className="navicon" src={n.icon} alt="" />
               <span>{n.label}</span>
             </NavLink>
           ))}
