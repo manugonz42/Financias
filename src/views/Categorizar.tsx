@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { RefreshCw, Eraser, ArrowRight } from "lucide-react";
+import { RefreshCw, ArrowRight } from "lucide-react";
 import { useApp } from "../state/AppContext";
 import {
   listUncategorized,
   assignGroup,
   recategorizePending,
-  clearManualCategories,
-  countManualCategories,
   type UncatGroup,
 } from "../data/review";
 import { addRuleForKey } from "../data/rules";
@@ -72,31 +70,6 @@ export function Categorizar() {
     }
   }
 
-  async function clearManuals() {
-    if (working) return;
-    const marked = await countManualCategories();
-    if (marked === 0) {
-      toast("No hay categorizaciones manuales en esta sesión");
-      return;
-    }
-    if (
-      !confirm(
-        `Esto devolverá al fallback ${marked} movimientos que categorizaste a mano. ¿Continuar?`,
-      )
-    ) {
-      return;
-    }
-    setWorking(true);
-    try {
-      const n = await clearManualCategories();
-      toast(`${n} movimientos devueltos al fallback`);
-      reload();
-      await load();
-    } finally {
-      setWorking(false);
-    }
-  }
-
   const done = !loading && idx >= groups.length;
   const total = groups.length;
 
@@ -120,15 +93,6 @@ export function Categorizar() {
             title="Reaplica las reglas actuales a todos los movimientos en «Otros gastos/Otros ingresos»"
           >
             <RefreshCw /> Re-clasificar pendientes
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void clearManuals()}
-            disabled={working}
-            title="Devuelve al fallback los movimientos que asignaste a mano"
-          >
-            <Eraser /> Borrar manuales
           </Button>
         </div>
       </div>
