@@ -83,8 +83,8 @@ export interface NewCategory {
   parentId?: number | null;
 }
 
-/** Crea una categoría. Si tiene padre, hereda su `kind` por coherencia. */
-export async function createCategory(c: NewCategory): Promise<void> {
+/** Crea una categoría y devuelve su id. Si tiene padre, hereda su `kind`. */
+export async function createCategory(c: NewCategory): Promise<number> {
   let kind = c.kind;
   if (c.parentId != null) {
     const parent = (await query<{ kind: Category["kind"] }>(
@@ -93,10 +93,22 @@ export async function createCategory(c: NewCategory): Promise<void> {
     ))[0];
     if (parent) kind = parent.kind;
   }
-  await exec(
+  const res = await exec(
     "INSERT INTO categories (name, kind, color, icon, parent_id) VALUES (?, ?, ?, ?, ?)",
     [c.name.trim(), kind, c.color ?? "#9ca3af", c.icon ?? "•", c.parentId ?? null],
   );
+  return Number(res.lastInsertId);
+}
+
+/**
+ * Agrupa varias categorías bajo un mismo padre: mueve cada una con `moveCategory`
+ * (reutiliza la validación de ciclos y la propagación de `kind`). Pensado para la
+ * acción "Agrupar (N) en…" del gestor de categorías.
+ */
+export async function moveCategoriesTo(childIds: number[], parentId: number): Promise<void> {
+  for (const id of childIds) {
+    await moveCategory(id, parentId);
+  }
 }
 
 /** Renombra / recolorea / cambia el icono de una categoría. */

@@ -10,6 +10,7 @@ import {
   createCategory,
   updateCategory,
   moveCategory,
+  moveCategoriesTo,
   deleteCategory,
 } from "../data/categories";
 import type { Category, CategoryNode } from "../types";
@@ -31,6 +32,31 @@ export function CategoryManager() {
   const [confirmDel, setConfirmDel] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Selección múltiple para agrupar varias categorías bajo un mismo padre.
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const byId = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  // Tipo común de la selección (se restringe a un único kind por coherencia).
+  const selKind: Category["kind"] | null = useMemo(() => {
+    const first = [...selected][0];
+    return first != null ? byId.get(first)?.kind ?? null : null;
+  }, [selected, byId]);
+  // Categorías que no pueden ser destino (las seleccionadas y sus descendientes).
+  const forbidden = useMemo(() => {
+    const f = new Set<number>();
+    for (const id of selected) for (const s of subtreeIds(categories, id)) f.add(s);
+    return f;
+  }, [selected, categories]);
+
+  function toggleSel(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  const clearSel = () => setSelected(new Set());
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -72,6 +98,28 @@ export function CategoryManager() {
         />
       )}
 
+      {selected.size > 0 && selKind && (
+        <GroupBar
+          count={selected.size}
+          selKind={selKind}
+          categories={categories}
+          forbidden={forbidden}
+          busy={busy}
+          onCancel={clearSel}
+          onGroup={(dest) =>
+            run(async () => {
+              const ids = [...selected];
+              const parentId =
+                dest.kind === "existing"
+                  ? dest.parentId
+                  : await createCategory({ name: dest.name, kind: selKind, color: dest.color, icon: dest.icon, parentId: null });
+              await moveCategoriesTo(ids, parentId);
+              clearSel();
+            })
+          }
+        />
+      )}
+
       <div className="table-wrap" style={{ marginTop: 8 }}>
         <table>
           <tbody>
@@ -81,6 +129,9 @@ export function CategoryManager() {
                 node={node}
                 allCats={categories}
                 busy={busy}
+                checked={selected.has(node.id)}
+                selectDisabled={selKind != null && node.kind !== selKind}
+                onToggleSelect={() => toggleSel(node.id)}
                 isEditing={editing === node.id}
                 isAddingChild={adding === node.id}
                 isConfirmingDelete={confirmDel === node.id}
@@ -113,10 +164,101 @@ export function CategoryManager() {
   );
 }
 
+type GroupDest =
+  | { kind: "existing"; parentId: number }
+  | { kind: "new"; name: string; color: string; icon: string };
+
+/** Barra "Agrupar (N) en…": mueve las categorías seleccionadas bajo un padre
+ *  existente (mismo tipo) o uno creado al vuelo. */
+function GroupBar(props: {
+  count: number;
+  selKind: Category["kind"];
+  categories: Category[];
+  forbidden: Set<number>;
+  busy: boolean;
+  onCancel: () => void;
+  onGroup: (dest: GroupDest) => void;
+}) {
+  const { iconStyle } = useApp();
+  const [dest, setDest] = useState<string>("__new__");
+  const [name, setName] = useState("");
+  const [icon, setIcon] = useState("•");
+  const [color, setColor] = useState(CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)]);
+  const [colorTouched, setColorTouched] = useState(false);
+  const effectiveColor = colorTouched ? color : colorForName(name) || color;
+
+  const options = useMemo(
+    () =>
+      props.categories
+        .filter((c) => c.kind === props.selKind && !props.forbidden.has(c.id))
+        .sort((a, b) => a.name.localeCompare(b.name, "es")),
+    [props.categories, props.selKind, props.forbidden],
+  );
+
+  const isNew = dest === "__new__";
+  const canGroup = !props.busy && (isNew ? name.trim().length > 0 : true);
+
+  function submit() {
+    if (isNew) props.onGroup({ kind: "new", name: name.trim(), color: effectiveColor, icon });
+    else props.onGroup({ kind: "existing", parentId: Number(dest) });
+  }
+
+  return (
+    <div
+      className="row"
+      style={{
+        gap: 8,
+        flexWrap: "wrap",
+        padding: "10px 12px",
+        marginTop: 8,
+        border: "1px solid var(--accent)",
+        borderRadius: "var(--radius)",
+        background: "var(--bg-soft)",
+      }}
+    >
+      <span style={{ fontWeight: 600 }}>{props.count} seleccionadas</span>
+      <span className="muted" style={{ fontSize: 13 }}>· Agrupar en:</span>
+      <select value={dest} onChange={(e) => setDest(e.target.value)}>
+        <option value="__new__">Nueva categoría…</option>
+        {options.map((c) => (
+          <option key={c.id} value={c.id}>
+            {iconStyle === "color" ? `${c.icon} ` : ""}
+            {c.name}
+          </option>
+        ))}
+      </select>
+
+      {isNew && (
+        <>
+          <IconPicker value={icon} onChange={setIcon} />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nombre del nuevo padre"
+            style={{ minWidth: 180 }}
+            autoFocus
+          />
+          <ColorPicker value={effectiveColor} onChange={(c) => { setColor(c); setColorTouched(true); }} />
+          <span className="muted" style={{ fontSize: 12 }}>Tipo: {KIND_LABEL[props.selKind]}</span>
+        </>
+      )}
+
+      <span className="spacer" />
+      <button onClick={props.onCancel} disabled={props.busy}>Cancelar</button>
+      <button className="primary" disabled={!canGroup} onClick={submit}>
+        Agrupar ({props.count})
+      </button>
+    </div>
+  );
+}
+
 function CategoryRow(props: {
   node: CategoryNode;
   allCats: Category[];
   busy: boolean;
+  checked: boolean;
+  selectDisabled: boolean;
+  onToggleSelect: () => void;
   isEditing: boolean;
   isAddingChild: boolean;
   isConfirmingDelete: boolean;
@@ -137,6 +279,16 @@ function CategoryRow(props: {
   return (
     <>
       <tr>
+        <td style={{ width: 1, paddingRight: 0 }}>
+          <input
+            type="checkbox"
+            checked={props.checked}
+            disabled={busy || props.selectDisabled}
+            onChange={props.onToggleSelect}
+            title={props.selectDisabled ? "Solo se agrupan categorías del mismo tipo" : "Seleccionar para agrupar"}
+            style={{ cursor: props.selectDisabled ? "not-allowed" : "pointer" }}
+          />
+        </td>
         <td style={{ whiteSpace: "normal" }}>
           <div className="row" style={{ paddingLeft: indent, gap: 8 }}>
             <span className="dot" style={{ background: node.color }} />
@@ -165,7 +317,7 @@ function CategoryRow(props: {
 
       {props.isEditing && (
         <tr>
-          <td colSpan={2} style={{ background: "var(--bg-soft)" }}>
+          <td colSpan={3} style={{ background: "var(--bg-soft)" }}>
             <EditForm node={node} allCats={allCats} busy={busy} onCancel={props.onCancelEdit} onSave={props.onSaveEdit} />
           </td>
         </tr>
@@ -173,7 +325,7 @@ function CategoryRow(props: {
 
       {props.isAddingChild && (
         <tr>
-          <td colSpan={2} style={{ background: "var(--bg-soft)" }}>
+          <td colSpan={3} style={{ background: "var(--bg-soft)" }}>
             <div style={{ paddingLeft: indent + 20 }}>
               <AddForm
                 parentId={node.id}
