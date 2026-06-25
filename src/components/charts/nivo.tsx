@@ -90,7 +90,9 @@ function barFills(
   const past = style.past ?? intrinsic[0];
   const now = style.now ?? intrinsic[1];
   const colors = ({ id }: { id: string | number }) => (id === keys[0] ? past : now);
-  if (style.fill !== "gradient") return { colors, defs: [], fill: [] as { match: { id: string }; id: string }[] };
+  // "flat" = sin degradado; "gradient" y "neon" usan el mismo relleno degradado
+  // (el "neon" además añade un halo en una capa aparte del gráfico).
+  if (style.fill === "flat") return { colors, defs: [], fill: [] as { match: { id: string }; id: string }[] };
   return {
     colors,
     defs: [
@@ -109,6 +111,29 @@ function barFills(
     ],
   };
 }
+
+/** Capa de Nivo (antes de "bars") que pinta un halo desenfocado del color de cada
+ *  barra detrás de ella → efecto "neón"/luz sobre fondo oscuro. */
+const NeonGlow = ({ bars }: { bars: { key: string; x: number; y: number; width: number; height: number; color: string }[] }) =>
+  bars.map((b) => (
+    <rect
+      key={b.key}
+      x={b.x}
+      y={b.y}
+      width={b.width}
+      height={b.height}
+      rx={6}
+      ry={6}
+      fill={b.color}
+      opacity={0.85}
+      pointerEvents="none"
+      style={{ filter: "blur(7px)" }}
+    />
+  ));
+
+/** Orden de capas de las barras con el halo neón insertado antes de "bars". */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const NEON_LAYERS: any[] = ["grid", "axes", NeonGlow, "bars", "markers", "legends", "annotations"];
 
 /** Variante del theme con los ticks de los ejes en la fuente mono de la app
  *  (cifras "tabular", look técnico de Linear). */
@@ -342,6 +367,7 @@ export function NivoFlows({ rows, palette, style }: { rows: MonthlyFlow[]; palet
         colors={colors}
         defs={defs}
         fill={fill}
+        layers={style.fill === "neon" ? NEON_LAYERS : undefined}
         enableLabel={false}
         enableGridX={false}
         enableGridY={false}
@@ -414,6 +440,7 @@ export function NivoCategoryCompare({
         colors={colors}
         defs={defs}
         fill={fill}
+        layers={style.fill === "neon" ? NEON_LAYERS : undefined}
         enableLabel={false}
         enableGridX={false}
         enableGridY={false}

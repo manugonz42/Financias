@@ -2,7 +2,7 @@
 // dashboard. Se eligen desde el botón "Estilo" de la cabecera del widget y se
 // persisten por widget (settings → key `barstyle:<widgetKey>`).
 
-export type BarFill = "flat" | "gradient";
+export type BarFill = "flat" | "gradient" | "neon";
 
 export interface BarStyle {
   id: string;
@@ -25,6 +25,13 @@ export const BAR_STYLES: BarStyle[] = [
   { id: "sunset", label: "Atardecer", fill: "gradient", past: "#fb7185", now: "#a855f7" },
   { id: "emerald", label: "Esmeralda", fill: "gradient", past: "#6ee7b7", now: "#10b981" },
   { id: "warm", label: "Cálido", fill: "gradient", past: "#fbbf24", now: "#ef4444" },
+  // Neón: colores luminosos con halo (parece luz sobre el fondo oscuro).
+  { id: "neon-greenpurple", label: "Neón verde·morado", fill: "neon", past: "#39ff14", now: "#b026ff" },
+  { id: "neon-cyanmagenta", label: "Neón cian·magenta", fill: "neon", past: "#00eaff", now: "#ff00d4" },
+  { id: "neon-limeaqua", label: "Neón lima·aqua", fill: "neon", past: "#aaff00", now: "#00ffd5" },
+  { id: "neon-pinkviolet", label: "Neón rosa·violeta", fill: "neon", past: "#ff3d9a", now: "#8b5cff" },
+  { id: "neon-orangepink", label: "Neón naranja·rosa", fill: "neon", past: "#ff7a00", now: "#ff2d95" },
+  { id: "neon-bluecyan", label: "Neón azul·cian", fill: "neon", past: "#2f6bff", now: "#00eaff" },
 ];
 
 export const DEFAULT_BAR_STYLE = "default";

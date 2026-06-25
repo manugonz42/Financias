@@ -15,9 +15,14 @@ function BarsIcon() {
 
 /** Relleno CSS de una barra del preview según el estilo y los colores resueltos. */
 function fillFor(style: BarStyle, color: string): string {
-  return style.fill === "gradient"
-    ? `linear-gradient(180deg, ${color}, color-mix(in srgb, ${color} 55%, transparent))`
-    : color;
+  return style.fill === "flat"
+    ? color
+    : `linear-gradient(180deg, ${color}, color-mix(in srgb, ${color} 55%, transparent))`;
+}
+
+/** Halo (box-shadow) para las celdas neón del preview. */
+function glowFor(style: BarStyle, color: string): string | undefined {
+  return style.fill === "neon" ? `0 0 6px ${color}, 0 0 2px ${color}` : undefined;
 }
 
 /** Mini-preview de 2 barras (pasado/este) para una celda del selector. */
@@ -26,8 +31,8 @@ function Preview({ style, intrinsic }: { style: BarStyle; intrinsic: { past: str
   const now = style.now ?? intrinsic.now;
   return (
     <span className="flex h-7 items-end justify-center gap-1">
-      <span className="w-2 rounded-t-[2px]" style={{ height: "60%", background: fillFor(style, past) }} />
-      <span className="w-2 rounded-t-[2px]" style={{ height: "100%", background: fillFor(style, now) }} />
+      <span className="w-2 rounded-t-[2px]" style={{ height: "60%", background: fillFor(style, past), boxShadow: glowFor(style, past) }} />
+      <span className="w-2 rounded-t-[2px]" style={{ height: "100%", background: fillFor(style, now), boxShadow: glowFor(style, now) }} />
     </span>
   );
 }
