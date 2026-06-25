@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useApp } from "../state/AppContext";
+import { CategoryGlyph } from "../lib/icons";
 import { IconPicker } from "./IconPicker";
 import { ColorPicker, CATEGORY_COLORS, colorForName } from "./ColorPicker";
 import {
@@ -130,6 +131,7 @@ function CategoryRow(props: {
   onConfirmDelete: () => void;
 }) {
   const { node, allCats, busy } = props;
+  const { iconStyle } = useApp();
   const indent = node.depth * 20;
 
   return (
@@ -138,7 +140,7 @@ function CategoryRow(props: {
         <td style={{ whiteSpace: "normal" }}>
           <div className="row" style={{ paddingLeft: indent, gap: 8 }}>
             <span className="dot" style={{ background: node.color }} />
-            <span>{node.icon} {node.name}</span>
+            <span><CategoryGlyph icon={node.icon} mode={iconStyle} /> {node.name}</span>
             {node.depth === 0 && (
               <span className="muted" style={{ fontSize: 12 }}>· {KIND_LABEL[node.kind]}</span>
             )}
@@ -234,6 +236,7 @@ function EditForm(props: {
   onSave: (fields: { name: string; color: string; icon: string }, parentId: number | null) => void;
 }) {
   const { node } = props;
+  const { iconStyle } = useApp();
   const [name, setName] = useState(node.name);
   const [icon, setIcon] = useState(node.icon);
   const [color, setColor] = useState(node.color);
@@ -257,7 +260,7 @@ function EditForm(props: {
         <select value={parentId ?? ""} onChange={(e) => setParentId(e.target.value === "" ? null : Number(e.target.value))}>
           <option value="">(raíz)</option>
           {parentOptions.map((c) => (
-            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            <option key={c.id} value={c.id}>{iconStyle === "color" ? `${c.icon} ` : ""}{c.name}</option>
           ))}
         </select>
       </label>

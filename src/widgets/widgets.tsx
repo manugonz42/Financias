@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState, type FC } from "react";
 import { createPortal } from "react-dom";
-import { NivoDonut, NivoFlows, NivoBalance, NivoCash, NivoCalendar, NivoSunburst, NivoBudgets, NivoGoals } from "../components/charts/nivo";
+import { NivoDonut, NivoFlows, NivoBalance, NivoCash, NivoCalendar, NivoSunburst, NivoBudgets, NivoGoals, NivoCategoryCompare } from "../components/charts/nivo";
+import { Button } from "@/components/ui/button";
 import { DateRangeMenu } from "../components/DateRangeMenu";
 import { PaletteMenu } from "../components/PaletteMenu";
+import { BarStyleMenu } from "../components/BarStyleMenu";
 import { useChartPalette } from "../components/charts/useChartPalette";
+import { useBarStyle } from "../components/charts/useBarStyle";
 import { formatEUR, monthKey } from "../lib/format";
 import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions, dailySpend } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
@@ -12,8 +15,10 @@ import { listScheduled, type ScheduledRow } from "../data/scheduled";
 import { topReceiptItems, type ItemAggregate } from "../data/receipts";
 import { daysUntil } from "../lib/schedule";
 import { donutSlices, categorySunburst } from "../lib/donut";
+import { subtreeIds } from "../data/categories";
+import { CategoryGlyph } from "../lib/icons";
 import { useApp } from "../state/AppContext";
-import type { Goal, TxFilters } from "../types";
+import type { Category, Goal, TxFilters } from "../types";
 import type { MonthlyFlow, BalancePoint, CashPoint, Subscription, KpiSummary, NetWorthNow, DailySpend } from "../data/stats";
 
 export interface WidgetProps {
@@ -26,6 +31,99 @@ export interface WidgetProps {
   headerSlot?: HTMLElement | null;
   /** Identificador del widget (sirve para persistir el override de paleta). */
   widgetKey?: string;
+}
+
+/**
+ * Categorías de gasto que se excluyen del cálculo de «gasto corriente» (gastos
+ * grandes y poco representativos del día a día). Se identifican por nombre e
+ * incluyen sus subcategorías.
+ */
+const EXCLUDED_EXPENSE_NAMES = ["Alquiler", "Casa", "Coche y Moto"];
+
+const normalize = (s: string) => s.trim().toLowerCase();
+
+/** Categorías raíz (de la lista plana) que coinciden con los nombres excluidos. */
+function excludedRoots(categories: Category[]): Category[] {
+  const targets = new Set(EXCLUDED_EXPENSE_NAMES.map(normalize));
+  return categories.filter((c) => targets.has(normalize(c.name)));
+}
+
+/** IDs a excluir = raíces coincidentes + todos sus descendientes. */
+function excludedExpenseIds(categories: Category[]): number[] {
+  const ids = new Set<number>();
+  for (const root of excludedRoots(categories)) {
+    for (const id of subtreeIds(categories, root.id)) ids.add(id);
+  }
+  return [...ids];
+}
+
+/** Mes 'YYYY-MM' de una fecha. */
+const ym = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+/** Una categoría raíz con su gasto en el mes actual y el anterior. */
+interface CatCompareRow {
+  id: number;
+  name: string;
+  color: string;
+  icon: string;
+  now: number;
+  prev: number;
+}
+
+/**
+ * Gasto por categoría raíz (roll-up de su subárbol) en el mes actual vs el anterior.
+ * Devuelve solo las categorías con gasto en alguno de los dos meses, ordenadas por el
+ * total de ambos meses. Reutiliza `spendByCategoryId` (filtro por mes) + `donutSlices`.
+ */
+async function categoryCompare(
+  categories: Category[],
+  base: { accountId: number | "all"; excludeInternal: boolean },
+  thisM: string,
+  prevM: string,
+): Promise<CatCompareRow[]> {
+  // Fuera las categorías de gasto grande/fijo (alquiler/casa, coche y moto): no aportan
+  // a la comparación del día a día. No se rotula en el widget.
+  const exclude = excludedExpenseIds(categories);
+  const [nowLeaf, prevLeaf] = await Promise.all([
+    spendByCategoryId({ ...base, month: thisM, excludeCategoryIds: exclude }),
+    spendByCategoryId({ ...base, month: prevM, excludeCategoryIds: exclude }),
+  ]);
+  const nowById = new Map(
+    donutSlices(categories, new Map(nowLeaf.map((r) => [r.id, r.value])), null).map((s) => [s.id, s.value]),
+  );
+  const prevById = new Map(
+    donutSlices(categories, new Map(prevLeaf.map((r) => [r.id, r.value])), null).map((s) => [s.id, s.value]),
+  );
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const ids = new Set<number>([...nowById.keys(), ...prevById.keys()]);
+  return [...ids]
+    .map((id) => {
+      const c = byId.get(id);
+      return {
+        id,
+        name: c?.name ?? "?",
+        color: c?.color ?? "#888",
+        icon: c?.icon ?? "•",
+        now: nowById.get(id) ?? 0,
+        prev: prevById.get(id) ?? 0,
+      };
+    })
+    .sort((a, b) => b.now + b.prev - (a.now + a.prev));
+}
+
+/** Conmutador €/% que viaja a la cabecera del widget (junto a la X). */
+function PctEurToggle({ mode, onToggle }: { mode: "eur" | "pct"; onToggle: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      onClick={onToggle}
+      title={mode === "eur" ? "Mostrar variación en %" : "Mostrar diferencia en €"}
+    >
+      {mode === "eur" ? "€" : "%"}
+    </Button>
+  );
 }
 
 /** Filtro acotado al rango de fechas seleccionado en el dashboard. */
@@ -173,15 +271,19 @@ const NetWorthBody: FC<WidgetProps> = (p) => {
 
 const MonthlyBarsBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<MonthlyFlow[]>([]);
-  const { colors, override, setOverride } = useChartPalette(p.widgetKey);
+  const { id, style, setStyle } = useBarStyle(p.widgetKey);
   useEffect(() => {
     void monthlyFlows(scope(p)).then(setData);
   }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
   return (
     <>
-      <NivoFlows rows={data} palette={colors} />
-      {p.headerSlot && createPortal(<PaletteMenu value={override} onChange={setOverride} />, p.headerSlot)}
+      <NivoFlows rows={data} style={style} />
+      {p.headerSlot &&
+        createPortal(
+          <BarStyleMenu value={id} onChange={setStyle} intrinsic={{ past: "var(--bad)", now: "var(--good)" }} />,
+          p.headerSlot,
+        )}
     </>
   );
 };
@@ -365,42 +467,241 @@ const SunburstBody: FC<WidgetProps> = (p) => {
 };
 
 const MonthCompareBody: FC<WidgetProps> = (p) => {
+  const { categories } = useApp();
   const [data, setData] = useState<{ now: number; prev: number } | null>(null);
+  const excludedIds = useMemo(() => excludedExpenseIds(categories), [categories]);
   useEffect(() => {
     const d = new Date();
-    const ym = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const thisM = ym(d);
     const prevM = ym(new Date(d.getFullYear(), d.getMonth() - 1, 1));
-    const base = { accountId: p.accountId, excludeInternal: p.excludeInternal };
+    const base = {
+      accountId: p.accountId,
+      excludeInternal: p.excludeInternal,
+      excludeCategoryIds: excludedIds,
+    };
     void Promise.all([kpis({ ...base, month: thisM }), kpis({ ...base, month: prevM })]).then(
       ([a, b]) => setData({ now: a.expense, prev: b.expense }),
     );
-  }, [p.accountId, p.excludeInternal, p.version]);
+  }, [p.accountId, p.excludeInternal, p.version, excludedIds]);
 
   if (!data) return <span className="muted">…</span>;
   const delta = data.prev > 0 ? ((data.now - data.prev) / data.prev) * 100 : 0;
   const up = data.now > data.prev; // gastar más que el mes pasado = peor
   return (
-    <div className="flex h-full flex-col justify-center gap-4">
-      <div>
-        <div className="text-xs text-muted-foreground">Gasto este mes</div>
-        <div className="font-mono text-3xl font-bold tabular-nums text-foreground">{formatEUR(data.now)}</div>
-      </div>
-      <div className="flex items-end gap-2">
+    <div className="relative flex h-full flex-col justify-center gap-4 overflow-hidden">
+      {/* Acento superior degradado (coherente con «Gastos de este mes») */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-20 opacity-[0.07]"
+        style={{ background: "linear-gradient(180deg, var(--accent), transparent)" }}
+      />
+      <div className="relative flex items-start justify-between gap-2">
         <div>
-          <div className="text-xs text-muted-foreground">Mes pasado</div>
-          <div className="font-mono text-lg tabular-nums text-muted-foreground">{formatEUR(data.prev)}</div>
+          <div className="text-xs text-muted-foreground">Gasto este mes</div>
+          <div className="font-mono text-3xl font-bold tabular-nums text-foreground">{formatEUR(data.now)}</div>
         </div>
         {data.prev > 0 && (
           <span
-            className="ml-auto font-mono text-sm font-semibold tabular-nums"
-            style={{ color: up ? "var(--bad)" : "var(--good)" }}
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-xs font-semibold tabular-nums"
+            style={{
+              color: up ? "var(--bad)" : "var(--good)",
+              background: `color-mix(in srgb, ${up ? "var(--bad)" : "var(--good)"} 14%, transparent)`,
+            }}
           >
             {up ? "▲" : "▼"} {Math.abs(delta).toFixed(0)}%
           </span>
         )}
       </div>
+      <div className="relative">
+        <div className="text-xs text-muted-foreground">Mes pasado</div>
+        <div className="font-mono text-lg tabular-nums text-muted-foreground">{formatEUR(data.prev)}</div>
+      </div>
+      <div className="relative text-[11px] text-muted-foreground/70">sin alquiler ni coche</div>
     </div>
+  );
+};
+
+const MonthExpenseBody: FC<WidgetProps> = (p) => {
+  const { categories, iconStyle } = useApp();
+  const [data, setData] = useState<{ now: number; prev: number; day: number } | null>(null);
+  const excludedIds = useMemo(() => excludedExpenseIds(categories), [categories]);
+  const excluded = useMemo(() => excludedRoots(categories), [categories]);
+
+  useEffect(() => {
+    const d = new Date();
+    const thisM = ym(d);
+    const prevM = ym(new Date(d.getFullYear(), d.getMonth() - 1, 1));
+    const base = {
+      accountId: p.accountId,
+      excludeInternal: p.excludeInternal,
+      excludeCategoryIds: excludedIds,
+    };
+    void Promise.all([kpis({ ...base, month: thisM }), kpis({ ...base, month: prevM })]).then(
+      ([a, b]) => setData({ now: a.expense, prev: b.expense, day: d.getDate() }),
+    );
+  }, [p.accountId, p.excludeInternal, p.version, excludedIds]);
+
+  if (!data) return <span className="muted">…</span>;
+  const delta = data.prev > 0 ? ((data.now - data.prev) / data.prev) * 100 : 0;
+  const up = data.now > data.prev; // gastar más = peor
+  const perDay = data.day > 0 ? data.now / data.day : 0;
+
+  return (
+    <div className="relative flex h-full flex-col gap-3 overflow-hidden">
+      {/* Acento superior degradado */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-20 opacity-[0.07]"
+        style={{ background: "linear-gradient(180deg, var(--accent), transparent)" }}
+      />
+      <div className="relative flex items-baseline justify-between">
+        <span className="text-xs font-medium text-muted-foreground">Gasto corriente del mes</span>
+        {data.prev > 0 && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-xs font-semibold tabular-nums"
+            style={{
+              color: up ? "var(--bad)" : "var(--good)",
+              background: `color-mix(in srgb, ${up ? "var(--bad)" : "var(--good)"} 14%, transparent)`,
+            }}
+          >
+            {up ? "▲" : "▼"} {Math.abs(delta).toFixed(0)}%
+          </span>
+        )}
+      </div>
+
+      <div className="relative">
+        <div className="font-mono text-4xl font-bold leading-none tabular-nums text-foreground">
+          {formatEUR(data.now)}
+        </div>
+        <div className="mt-1.5 text-xs text-muted-foreground">
+          ≈ {formatEUR(perDay)}/día · mes pasado {formatEUR(data.prev)}
+        </div>
+      </div>
+
+      <div className="relative mt-auto flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] text-muted-foreground">Excluye</span>
+        {excluded.length === 0 ? (
+          <span className="text-[11px] text-muted-foreground/70">alquiler · coche y moto</span>
+        ) : (
+          excluded.map((c) => (
+            <span
+              key={c.id}
+              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]"
+              style={{
+                borderColor: `color-mix(in srgb, ${c.color} 45%, transparent)`,
+                background: `color-mix(in srgb, ${c.color} 12%, transparent)`,
+                color: "var(--text)",
+              }}
+            >
+              <CategoryGlyph icon={c.icon} mode={iconStyle} />
+              {c.name}
+            </span>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+/** Hook común a los dos comparadores: carga el gasto por categoría de este mes vs el
+ *  pasado y mantiene el conmutador €/%. */
+function useCategoryCompare(p: WidgetProps) {
+  const { categories } = useApp();
+  const [rows, setRows] = useState<CatCompareRow[] | null>(null);
+  const [mode, setMode] = useState<"eur" | "pct">("eur");
+  useEffect(() => {
+    const d = new Date();
+    const thisM = ym(d);
+    const prevM = ym(new Date(d.getFullYear(), d.getMonth() - 1, 1));
+    void categoryCompare(categories, { accountId: p.accountId, excludeInternal: p.excludeInternal }, thisM, prevM).then(
+      setRows,
+    );
+  }, [p.accountId, p.excludeInternal, p.version, categories]);
+  return { rows, mode, toggle: () => setMode((m) => (m === "eur" ? "pct" : "eur")) };
+}
+
+const CatCompareBody: FC<WidgetProps> = (p) => {
+  const { iconStyle } = useApp();
+  const { rows, mode, toggle } = useCategoryCompare(p);
+  const toggleEl = p.headerSlot && createPortal(<PctEurToggle mode={mode} onToggle={toggle} />, p.headerSlot);
+
+  if (!rows) return <span className="muted">…</span>;
+  if (rows.length === 0)
+    return (
+      <>
+        <span className="muted">Sin gastos este mes ni el pasado.</span>
+        {toggleEl}
+      </>
+    );
+
+  return (
+    <div className="flex h-full flex-col gap-1.5 overflow-y-auto">
+      {rows.map((r) => {
+        const diff = r.now - r.prev;
+        const up = diff > 0;
+        // Etiqueta de la diferencia según el modo (€ de diferencia o % de variación).
+        let label: string;
+        if (mode === "eur") {
+          label = `${up ? "+" : diff < 0 ? "−" : ""}${formatEUR(Math.abs(diff))}`;
+        } else if (r.prev === 0) {
+          label = "nuevo";
+        } else {
+          const pct = (diff / r.prev) * 100;
+          label = `${up ? "+" : "−"}${Math.abs(pct).toFixed(0)}%`;
+        }
+        const tone = up ? "var(--bad)" : diff < 0 ? "var(--good)" : "var(--text-dim)";
+        return (
+          <div key={r.id} className="flex items-center gap-2 text-[13px]">
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span style={{ color: r.color }}>
+                <CategoryGlyph icon={r.icon} mode={iconStyle} />
+              </span>
+              <span className="truncate text-foreground">{r.name}</span>
+            </span>
+            <span className="ml-auto flex shrink-0 items-center gap-2 font-mono tabular-nums">
+              <span className="text-muted-foreground/70">{formatEUR(r.prev)}</span>
+              <span aria-hidden className="text-muted-foreground/40">→</span>
+              <span className="font-semibold text-foreground">{formatEUR(r.now)}</span>
+              <span
+                className="inline-flex w-[64px] justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                style={{ color: tone, background: `color-mix(in srgb, ${tone} 14%, transparent)` }}
+              >
+                {label}
+              </span>
+            </span>
+          </div>
+        );
+      })}
+      {toggleEl}
+    </div>
+  );
+};
+
+const CatCompareBarsBody: FC<WidgetProps> = (p) => {
+  const { rows, mode, toggle } = useCategoryCompare(p);
+  const { id, style, setStyle } = useBarStyle(p.widgetKey);
+  const headerEl =
+    p.headerSlot &&
+    createPortal(
+      <>
+        <BarStyleMenu value={id} onChange={setStyle} intrinsic={{ past: "var(--text-dim)", now: "var(--text)" }} />
+        <PctEurToggle mode={mode} onToggle={toggle} />
+      </>,
+      p.headerSlot,
+    );
+  if (!rows) return <span className="muted">…</span>;
+  if (rows.length === 0)
+    return (
+      <>
+        <span className="muted">Sin gastos este mes ni el pasado.</span>
+        {headerEl}
+      </>
+    );
+  return (
+    <>
+      <NivoCategoryCompare rows={rows} mode={mode} style={style} />
+      {headerEl}
+    </>
   );
 };
 
@@ -416,6 +717,9 @@ export const WIDGETS: WidgetDef[] = [
   { key: "donut", title: "Gasto por categoría", w: 8, h: 10, Body: CategoryDonutBody },
   { key: "kpis", title: "Resumen del periodo", w: 4, h: 4, Body: KpiBody },
   { key: "monthcompare", title: "Gasto: mes pasado vs este mes", w: 4, h: 4, Body: MonthCompareBody },
+  { key: "monthexpense", title: "Gastos de este mes", w: 4, h: 5, Body: MonthExpenseBody },
+  { key: "catcompare", title: "Comparativa por categoría", w: 4, h: 7, Body: CatCompareBody },
+  { key: "catcomparebars", title: "Comparativa por categoría (barras)", w: 6, h: 7, Body: CatCompareBarsBody },
   { key: "networth", title: "Patrimonio neto", w: 4, h: 4, Body: NetWorthBody },
   { key: "bars", title: "Gastos vs ingresos por mes", w: 8, h: 8, Body: MonthlyBarsBody },
   { key: "balance", title: "Evolución de saldo / patrimonio", w: 8, h: 8, Body: BalanceLineBody },

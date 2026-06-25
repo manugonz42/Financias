@@ -18,7 +18,7 @@ export function SplitEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { categories, toast } = useApp();
+  const { categories, toast, iconStyle } = useApp();
   const target = +Math.abs(tx.importe).toFixed(2);
   const [parts, setParts] = useState<Part[]>([]);
   const [busy, setBusy] = useState(false);
@@ -99,7 +99,7 @@ export function SplitEditor({
               style={{ minWidth: 200, flex: 1 }}
             >
               {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                <option key={c.id} value={c.id}>{iconStyle === "color" ? `${c.icon} ` : ""}{c.name}</option>
               ))}
             </select>
             <input

@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useApp } from "../state/AppContext";
+import { CategoryGlyph } from "../lib/icons";
 import { AccountSelector, MonthSelect, ExcludeInternalToggle } from "../components/Controls";
 import { listTransactions, sumFlows, distinctMonths, distinctSubtypes, setReconciled, setReconciledBulk } from "../data/transactions";
 import { reassignCategoryByElement } from "../data/categories";
@@ -22,7 +23,7 @@ const SUBTYPE_LABEL: Record<string, string> = {
 };
 
 export function Movimientos() {
-  const { accountId, excludeInternal, categories, version, reload, toast } = useApp();
+  const { accountId, excludeInternal, categories, version, reload, toast, iconStyle } = useApp();
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const [editingCat, setEditingCat] = useState<number | null>(null);
   const [months, setMonths] = useState<string[]>([]);
@@ -122,7 +123,7 @@ export function Movimientos() {
         <select value={String(categoryId)} onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : "")}>
           <option value="">Todas las categorías</option>
           {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            <option key={c.id} value={c.id}>{iconStyle === "color" ? `${c.icon} ` : ""}{c.name}</option>
           ))}
         </select>
         <select value={subtype} onChange={(e) => setSubtype(e.target.value)}>
@@ -240,7 +241,7 @@ export function Movimientos() {
                         style={{ maxWidth: 160, padding: "4px 6px", fontSize: 12 }}
                       >
                         {categories.map((c) => (
-                          <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                          <option key={c.id} value={c.id}>{iconStyle === "color" ? `${c.icon} ` : ""}{c.name}</option>
                         ))}
                       </select>
                     ) : (
@@ -254,7 +255,7 @@ export function Movimientos() {
                             borderColor: `${t.category_color ?? "#9ca3af"}55`,
                           }}
                         >
-                          <span>{catById.get(t.category_id ?? -1)?.icon ?? "•"}</span>
+                          <CategoryGlyph icon={catById.get(t.category_id ?? -1)?.icon ?? "•"} mode={iconStyle} />
                           <span>{t.category_name ?? "—"}</span>
                         </button>
                         <button className="link-btn" onClick={() => setSplitting(t)} title="Dividir en varias categorías">✂</button>

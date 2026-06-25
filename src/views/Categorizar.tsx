@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { RefreshCw, ArrowRight } from "lucide-react";
 import { useApp } from "../state/AppContext";
+import { CategoryGlyph } from "../lib/icons";
 import {
   listUncategorized,
   assignGroup,
@@ -14,7 +15,7 @@ import { Button } from "../components/ui/button";
 import { formatEUR, formatDate } from "../lib/format";
 
 export function Categorizar() {
-  const { categories, reload, toast } = useApp();
+  const { categories, reload, toast, iconStyle } = useApp();
   const [groups, setGroups] = useState<UncatGroup[]>([]);
   const [idx, setIdx] = useState(0);
   const [remember, setRemember] = useState(true);
@@ -191,7 +192,7 @@ export function Categorizar() {
                     className="h-6 w-1 shrink-0 rounded-full"
                     style={{ background: c.color }}
                   />
-                  <span className="text-base leading-none">{c.icon}</span>
+                  <CategoryGlyph icon={c.icon} mode={iconStyle} className="text-base leading-none" />
                   <span className="truncate text-foreground">{c.name}</span>
                 </button>
               ))}

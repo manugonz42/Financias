@@ -9,8 +9,9 @@ import {
 import type { Account, Category } from "../types";
 import { listAccounts } from "../data/accounts";
 import { listCategories } from "../data/categories";
-import { getExcludeInternal, setExcludeInternal as persistExcl, getOwnerName, getTheme, setThemeSetting, getChartPalette, setChartPalette, type Theme } from "../data/settings";
+import { getExcludeInternal, setExcludeInternal as persistExcl, getOwnerName, getTheme, setThemeSetting, getChartPalette, setChartPalette, getIconStyle, setIconStyle as persistIconStyle, type Theme } from "../data/settings";
 import type { PaletteId } from "../lib/palettes";
+import type { IconStyle } from "../lib/icons";
 
 interface AppState {
   accounts: Account[];
@@ -27,6 +28,9 @@ interface AppState {
   /** Paleta de gráficos global. Cada widget puede sobreescribirla. */
   palette: PaletteId;
   setPalette: (p: PaletteId) => void;
+  /** Estilo de iconos global: emoji a color ("color") o Lucide outline ("linear"). */
+  iconStyle: IconStyle;
+  setIconStyle: (s: IconStyle) => void;
   /** Muestra un aviso breve (toast). */
   toast: (msg: string) => void;
   /** Contador que se incrementa para forzar recarga de datos tras cambios. */
@@ -45,6 +49,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [excludeInternal, setExcludeInternalState] = useState(true);
   const [theme, setThemeState] = useState<Theme>("dark");
   const [palette, setPaletteState] = useState<PaletteId>("categoria");
+  const [iconStyle, setIconStyleState] = useState<IconStyle>("color");
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
   const [version, setVersion] = useState(0);
 
@@ -60,13 +65,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [accs, cats, excl, owner, th, pal] = await Promise.all([
+      const [accs, cats, excl, owner, th, pal, iStyle] = await Promise.all([
         listAccounts(),
         listCategories(),
         getExcludeInternal(),
         getOwnerName(),
         getTheme(),
         getChartPalette(),
+        getIconStyle(),
       ]);
       if (cancelled) return;
       setAccounts(accs);
@@ -75,6 +81,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setOwnerName(owner);
       setThemeState(th);
       setPaletteState(pal);
+      setIconStyleState(iStyle);
       document.documentElement.setAttribute("data-theme", th);
       setLoading(false);
     })();
@@ -102,6 +109,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setVersion((v) => v + 1); // re-render de gráficos con la paleta nueva
   }, []);
 
+  const setIconStyle = useCallback((s: IconStyle) => {
+    setIconStyleState(s);
+    void persistIconStyle(s);
+  }, []);
+
   return (
     <Ctx.Provider
       value={{
@@ -117,6 +129,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setTheme,
         palette,
         setPalette,
+        iconStyle,
+        setIconStyle,
         toast,
         version,
         reload,

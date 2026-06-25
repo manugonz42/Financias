@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useApp } from "../state/AppContext";
+import { lucideForEmoji } from "../lib/icons";
 
 /** Catálogo de iconos para categorías (emojis), agrupados temáticamente. */
 export const CATEGORY_ICONS: string[] = [
@@ -33,7 +35,10 @@ export function IconPicker({
   value: string;
   onChange: (icon: string) => void;
 }) {
+  const { iconStyle } = useApp();
   const [open, setOpen] = useState(false);
+  const linear = iconStyle === "linear";
+  const ValueIcon = linear ? lucideForEmoji(value || "•") : null;
   return (
     <>
       <button
@@ -42,23 +47,26 @@ export function IconPicker({
         title="Elegir icono"
         style={{ width: 48, textAlign: "center", fontSize: 18, lineHeight: 1 }}
       >
-        {value || "•"}
+        {ValueIcon ? <ValueIcon className="inline size-[18px]" aria-hidden /> : value || "•"}
       </button>
       {open && (
         <div className="icon-pop" style={{ flexBasis: "100%" }}>
-          {CATEGORY_ICONS.map((emoji, i) => (
-            <button
-              type="button"
-              key={`${emoji}-${i}`}
-              className={`icon-cell${emoji === value ? " sel" : ""}`}
-              onClick={() => {
-                onChange(emoji);
-                setOpen(false);
-              }}
-            >
-              {emoji}
-            </button>
-          ))}
+          {CATEGORY_ICONS.map((emoji, i) => {
+            const CellIcon = linear ? lucideForEmoji(emoji) : null;
+            return (
+              <button
+                type="button"
+                key={`${emoji}-${i}`}
+                className={`icon-cell${emoji === value ? " sel" : ""}`}
+                onClick={() => {
+                  onChange(emoji);
+                  setOpen(false);
+                }}
+              >
+                {CellIcon ? <CellIcon className="inline size-[18px]" aria-hidden /> : emoji}
+              </button>
+            );
+          })}
         </div>
       )}
     </>

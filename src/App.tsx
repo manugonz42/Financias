@@ -1,6 +1,7 @@
 import { NavLink, Routes, Route } from "react-router-dom";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NAV_LUCIDE } from "./lib/icons";
 import { useApp } from "./state/AppContext";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { Dashboard } from "./views/Dashboard";
@@ -35,17 +36,19 @@ const NAV = [
 ];
 
 export default function App() {
-  const { theme, setTheme } = useApp();
+  const { theme, setTheme, iconStyle } = useApp();
   const linkBase =
     "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors";
   return (
     <div className="flex h-full">
       <aside className="flex w-56 shrink-0 flex-col gap-0.5 border-r border-border bg-card p-3">
         <div className="flex items-center gap-2 px-3 pb-4 pt-2 text-lg font-bold text-foreground">
-          💰 Financias
+          {iconStyle === "linear" ? <Wallet className="size-5 shrink-0" /> : "💰"} Financias
         </div>
         <nav className="flex flex-col gap-0.5">
-          {NAV.map((n) => (
+          {NAV.map((n) => {
+            const LinearIcon = NAV_LUCIDE[n.to];
+            return (
             <NavLink
               key={n.to}
               to={n.to}
@@ -59,10 +62,15 @@ export default function App() {
                 )
               }
             >
-              <img className="h-[22px] w-[22px] shrink-0 object-contain" src={n.icon} alt="" />
+              {iconStyle === "linear" && LinearIcon ? (
+                <LinearIcon className="size-[22px] shrink-0" />
+              ) : (
+                <img className="h-[22px] w-[22px] shrink-0 object-contain" src={n.icon} alt="" />
+              )}
               <span>{n.label}</span>
             </NavLink>
-          ))}
+            );
+          })}
         </nav>
         <button
           className={cn(

@@ -25,7 +25,7 @@ export function ReceiptEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { categories, toast } = useApp();
+  const { categories, toast, iconStyle } = useApp();
   const target = +Math.abs(tx.importe).toFixed(2);
   const [path, setPath] = useState<string | null>(tx.receipt_path);
   const [preview, setPreview] = useState<string | null>(null);
@@ -173,7 +173,7 @@ export function ReceiptEditor({
             <input type="number" step="0.01" value={it.amount} onChange={(e) => update(i, { amount: e.target.value })} style={{ width: 90 }} />
             <select value={String(it.category_id)} onChange={(e) => update(i, { category_id: e.target.value ? Number(e.target.value) : "" })} style={{ maxWidth: 140 }}>
               <option value="">— categoría</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+              {categories.map((c) => <option key={c.id} value={c.id}>{iconStyle === "color" ? `${c.icon} ` : ""}{c.name}</option>)}
             </select>
             <button className="link-btn" style={{ color: "var(--bad)" }} onClick={() => removeItem(i)} title="Quitar línea">✕</button>
           </div>

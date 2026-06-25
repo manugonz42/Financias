@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { PALETTES, type PaletteId } from "../lib/palettes";
+import type { IconStyle } from "../lib/icons";
 import { ExcludeInternalToggle } from "../components/Controls";
 import { CategoryManager } from "../components/CategoryManager";
 import { ManualAccounts } from "../components/ManualAccounts";
@@ -11,7 +12,7 @@ import { formatEUR } from "../lib/format";
 import type { Account } from "../types";
 
 export function Ajustes() {
-  const { reload, palette, setPalette, toast } = useApp();
+  const { reload, palette, setPalette, iconStyle, setIconStyle, toast } = useApp();
   const [owner, setOwner] = useState("");
   const [accounts, setAccounts] = useState<Array<Account & { balance: number }>>([]);
   const [confirming, setConfirming] = useState(false);
@@ -112,6 +113,24 @@ export function Ajustes() {
             {PALETTES.map((p) => (
               <option key={p.id} value={p.id}>{p.label}</option>
             ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3>Estilo de iconos</h3>
+        <p className="muted" style={{ fontSize: 13 }}>
+          «Color» usa los iconos actuales (barra lateral en color y emojis de
+          categoría). «Lineal» los sustituye por iconos de línea monocromos que se
+          adaptan al tema claro/oscuro.
+        </p>
+        <div className="row" style={{ gap: 8 }}>
+          <select
+            value={iconStyle}
+            onChange={(e) => setIconStyle(e.target.value as IconStyle)}
+          >
+            <option value="color">Color</option>
+            <option value="linear">Lineal</option>
           </select>
         </div>
       </div>

@@ -136,6 +136,8 @@ export interface TxFilters {
   from?: string;
   to?: string;
   categoryId?: number;
+  /** IDs de categorías a EXCLUIR (los gastos sin categoría siguen contando). */
+  excludeCategoryIds?: number[];
   subtype?: string;
   search?: string;
   minAmount?: number;

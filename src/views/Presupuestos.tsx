@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useApp } from "../state/AppContext";
+import { CategoryGlyph } from "../lib/icons";
 import { MonthSelect } from "../components/Controls";
 import { EmptyState } from "../components/EmptyState";
 import { distinctMonths } from "../data/transactions";
@@ -11,7 +12,7 @@ import { query } from "../db/database";
 import { formatEUR } from "../lib/format";
 
 export function Presupuestos() {
-  const { categories, version, reload } = useApp();
+  const { categories, version, reload, iconStyle } = useApp();
   const [months, setMonths] = useState<string[]>([]);
   const [month, setMonth] = useState("");
   const [spent, setSpent] = useState<Map<string, number>>(new Map());
@@ -114,7 +115,7 @@ export function Presupuestos() {
             const over = available > 0 && sp > available;
             return (
               <div key={c.id} className="row" style={{ gap: 14 }}>
-                <span style={{ width: 200 }}>{c.icon} {c.name}</span>
+                <span style={{ width: 200 }}><CategoryGlyph icon={c.icon} mode={iconStyle} /> {c.name}</span>
                 <div style={{ flex: 1 }}>
                   <div className="bar">
                     <span style={{ width: `${pct}%`, background: over ? "var(--bad)" : c.color }} />

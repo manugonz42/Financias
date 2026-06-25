@@ -13,10 +13,12 @@ import { linearGradientDef } from "@nivo/core";
 import { formatEUR, monthLabelShort } from "../../lib/format";
 import { goalPercent } from "../../lib/goals";
 import { useApp } from "../../state/AppContext";
+import { CategoryGlyph } from "../../lib/icons";
 import type { MonthlyFlow, BalancePoint, CashPoint, DailySpend } from "../../data/stats";
 import type { DonutSlice, SunburstNode } from "../../lib/donut";
 import type { BudgetRow } from "../../data/budgets";
 import type { Goal } from "../../types";
+import type { BarStyle } from "../../lib/barStyles";
 
 const EXPENSE = "#ef4444";
 const INCOME = "#22c55e";
@@ -73,6 +75,54 @@ function Tip({ children }: { children: React.ReactNode }) {
 
 function Fill({ children }: { children: React.ReactNode }) {
   return <div style={{ height: "100%", width: "100%" }}>{children}</div>;
+}
+
+/**
+ * Traduce un `BarStyle` (relleno + colores) a las props de color de `ResponsiveBar`
+ * para un gráfico de dos series. Con colores `null` usa los intrínsecos del gráfico;
+ * en modo "gradient" genera los `defs`/`fill` de degradado vertical.
+ */
+function barFills(
+  style: BarStyle,
+  keys: [string, string],
+  intrinsic: [string, string],
+) {
+  const past = style.past ?? intrinsic[0];
+  const now = style.now ?? intrinsic[1];
+  const colors = ({ id }: { id: string | number }) => (id === keys[0] ? past : now);
+  if (style.fill !== "gradient") return { colors, defs: [], fill: [] as { match: { id: string }; id: string }[] };
+  return {
+    colors,
+    defs: [
+      linearGradientDef("barA", [
+        { offset: 0, color: past },
+        { offset: 100, color: past, opacity: 0.55 },
+      ]),
+      linearGradientDef("barB", [
+        { offset: 0, color: now },
+        { offset: 100, color: now, opacity: 0.55 },
+      ]),
+    ],
+    fill: [
+      { match: { id: keys[0] }, id: "barA" },
+      { match: { id: keys[1] }, id: "barB" },
+    ],
+  };
+}
+
+/** Variante del theme con los ticks de los ejes en la fuente mono de la app
+ *  (cifras "tabular", look técnico de Linear). */
+function withMonoTicks<T extends ReturnType<typeof useNivoTheme>>(theme: T) {
+  return {
+    ...theme,
+    axis: {
+      ...theme.axis,
+      ticks: {
+        ...theme.axis.ticks,
+        text: { ...theme.axis.ticks.text, fontFamily: "var(--font-mono)" },
+      },
+    },
+  };
 }
 
 function Swatch({ color }: { color: string }) {
@@ -265,8 +315,8 @@ export function NivoDonut({
 
 /* ----------------------------------------------- Barras: gastos vs ingresos */
 
-export function NivoFlows({ rows, palette }: { rows: MonthlyFlow[]; palette?: string[] | null }) {
-  const theme = useNivoTheme();
+export function NivoFlows({ rows, palette, style }: { rows: MonthlyFlow[]; palette?: string[] | null; style: BarStyle }) {
+  const theme = withMonoTicks(useNivoTheme());
   const data = rows.map((r) => ({
     month: monthLabelShort(r.month),
     Gastos: +r.expense.toFixed(2),
@@ -274,6 +324,9 @@ export function NivoFlows({ rows, palette }: { rows: MonthlyFlow[]; palette?: st
   }));
   const expense = palette && palette.length ? palette[0] : EXPENSE;
   const income = palette && palette.length > 1 ? palette[1] : (palette && palette.length ? palette[0] : INCOME);
+  const { colors, defs, fill } = barFills(style, ["Gastos", "Ingresos"], [expense, income]);
+  // Estilo "Linear": sin rejilla, barras esbeltas y redondeadas; relleno (plano o
+  // degradado) y colores según el estilo elegido.
   return (
     <Fill>
       <ResponsiveBar
@@ -283,33 +336,22 @@ export function NivoFlows({ rows, palette }: { rows: MonthlyFlow[]; palette?: st
         indexBy="month"
         groupMode="grouped"
         margin={{ top: 28, right: 16, bottom: 28, left: 52 }}
-        padding={0.3}
-        innerPadding={2}
-        borderRadius={4}
-        colors={({ id }) => (id === "Gastos" ? expense : income)}
-        defs={[
-          linearGradientDef("gExpense", [
-            { offset: 0, color: expense },
-            { offset: 100, color: expense, opacity: 0.5 },
-          ]),
-          linearGradientDef("gIncome", [
-            { offset: 0, color: income },
-            { offset: 100, color: income, opacity: 0.5 },
-          ]),
-        ]}
-        fill={[
-          { match: { id: "Gastos" }, id: "gExpense" },
-          { match: { id: "Ingresos" }, id: "gIncome" },
-        ]}
+        padding={0.4}
+        innerPadding={3}
+        borderRadius={6}
+        colors={colors}
+        defs={defs}
+        fill={fill}
         enableLabel={false}
         enableGridX={false}
-        axisBottom={{ tickSize: 0, tickPadding: 8 }}
-        axisLeft={{ tickSize: 0, tickPadding: 6, format: (v) => `${Math.round(Number(v))}` }}
+        enableGridY={false}
+        axisBottom={{ tickSize: 0, tickPadding: 10 }}
+        axisLeft={{ tickSize: 0, tickPadding: 8, format: (v) => `${Math.round(Number(v))}` }}
         motionConfig="gentle"
         tooltip={({ id, value, color }) => (
           <Tip>
             <Swatch color={color} />
-            {id}: <b>{formatEUR(Number(value))}</b>
+            {id}: <b style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{formatEUR(Number(value))}</b>
           </Tip>
         )}
         legends={[
@@ -319,6 +361,91 @@ export function NivoFlows({ rows, palette }: { rows: MonthlyFlow[]; palette?: st
             direction: "row",
             translateY: -24,
             itemWidth: 80,
+            itemHeight: 16,
+            symbolSize: 10,
+            symbolShape: "circle",
+            itemTextColor: cssVar("--text-dim", "#94a3b8"),
+          },
+        ]}
+      />
+    </Fill>
+  );
+}
+
+/* ------------------------------------ Barras: comparativa por categoría (mes a mes) */
+
+export function NivoCategoryCompare({
+  rows,
+  mode,
+  style,
+}: {
+  rows: { name: string; color: string; icon: string; prev: number; now: number }[];
+  mode: "eur" | "pct";
+  style: BarStyle;
+}) {
+  const theme = withMonoTicks(useNivoTheme());
+  const { iconStyle } = useApp();
+  // Colores intrínsecos en modo monocromo: pasado = gris atenuado, este mes = primer
+  // plano (blanco/negro según el tema). El estilo elegido puede sustituirlos.
+  const intrinsic: [string, string] = [cssVar("--text-dim", "#8a8f98"), cssVar("--text", "#f7f8f8")];
+  const { colors, defs, fill } = barFills(style, ["Pasado", "Este mes"], intrinsic);
+  const pct = mode === "pct";
+  const totalPrev = rows.reduce((s, r) => s + r.prev, 0) || 1;
+  const totalNow = rows.reduce((s, r) => s + r.now, 0) || 1;
+  const iconByName = new Map(rows.map((r) => [r.name, r.icon]));
+  const data = rows.map((r) => ({
+    name: r.name,
+    Pasado: pct ? +((r.prev / totalPrev) * 100).toFixed(1) : +r.prev.toFixed(2),
+    "Este mes": pct ? +((r.now / totalNow) * 100).toFixed(1) : +r.now.toFixed(2),
+  }));
+  const fmt = (v: number) => (pct ? `${v}%` : formatEUR(v));
+  return (
+    <Fill>
+      <ResponsiveBar
+        data={data}
+        theme={theme}
+        keys={["Pasado", "Este mes"]}
+        indexBy="name"
+        groupMode="grouped"
+        margin={{ top: 28, right: 16, bottom: 34, left: 48 }}
+        padding={0.42}
+        innerPadding={3}
+        borderRadius={6}
+        colors={colors}
+        defs={defs}
+        fill={fill}
+        enableLabel={false}
+        enableGridX={false}
+        enableGridY={false}
+        axisBottom={{
+          tickSize: 0,
+          tickPadding: 6,
+          // Eje inferior con iconos de categoría (respeta el estilo Color/Lineal).
+          renderTick: (tick) => (
+            <g transform={`translate(${tick.x},${tick.y})`}>
+              <foreignObject x={-11} y={6} width={22} height={22} style={{ overflow: "visible" }}>
+                <div style={{ display: "flex", justifyContent: "center", fontSize: 16, lineHeight: 1, color: "var(--text-dim)" }}>
+                  <CategoryGlyph icon={iconByName.get(String(tick.value)) ?? "•"} mode={iconStyle} />
+                </div>
+              </foreignObject>
+            </g>
+          ),
+        }}
+        axisLeft={{ tickSize: 0, tickPadding: 8, format: (v) => (pct ? `${Math.round(Number(v))}%` : `${Math.round(Number(v))}`) }}
+        motionConfig="gentle"
+        tooltip={({ id, value, color, indexValue }) => (
+          <Tip>
+            <Swatch color={color} />
+            {String(indexValue)} · {id}: <b style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(Number(value))}</b>
+          </Tip>
+        )}
+        legends={[
+          {
+            dataFrom: "keys",
+            anchor: "top-right",
+            direction: "row",
+            translateY: -24,
+            itemWidth: 78,
             itemHeight: 16,
             symbolSize: 10,
             symbolShape: "circle",
@@ -529,6 +656,7 @@ export function NivoSunburst({ root, palette }: { root: SunburstNode; palette?: 
 
 export function NivoBudgets({ rows }: { rows: BudgetRow[] }) {
   const theme = useNivoTheme();
+  const { iconStyle } = useApp();
   const track = cssVar("--bg-elev", "#273549");
   const marker = cssVar("--text", "#e2e8f0");
   return (
@@ -539,7 +667,7 @@ export function NivoBudgets({ rows }: { rows: BudgetRow[] }) {
         return (
           <div key={b.category_id}>
             <div className="row" style={{ fontSize: 13 }}>
-              <span>{b.icon} {b.category_name}</span>
+              <span><CategoryGlyph icon={b.icon} mode={iconStyle} /> {b.category_name}</span>
               <span className="spacer" />
               <span className={over ? "amount neg" : "muted"}>
                 {formatEUR(b.spent)} / {formatEUR(b.available)}

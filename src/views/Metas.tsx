@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { IconPicker } from "../components/IconPicker";
+import { CategoryGlyph } from "../lib/icons";
 import { ColorPicker } from "../components/ColorPicker";
 import { EmptyState } from "../components/EmptyState";
 import { listGoals, createGoal, updateGoal, deleteGoal, addContribution } from "../data/goals";
@@ -60,6 +61,7 @@ export function Metas() {
 }
 
 function GoalCard({ goal, onEdit, onChanged }: { goal: Goal; onEdit: () => void; onChanged: () => Promise<void> }) {
+  const { iconStyle } = useApp();
   const [contrib, setContrib] = useState("");
   const pct = goalPercent(goal.current_amount, goal.target_amount);
   const remaining = Math.max(0, goal.target_amount - goal.current_amount);
@@ -78,7 +80,7 @@ function GoalCard({ goal, onEdit, onChanged }: { goal: Goal; onEdit: () => void;
   return (
     <div className="card">
       <div className="row" style={{ marginBottom: 8 }}>
-        <span style={{ fontSize: 18 }}>{goal.icon}</span>
+        <CategoryGlyph icon={goal.icon} mode={iconStyle} style={{ fontSize: 18 }} />
         <b>{goal.name}</b>
         <span className="spacer" />
         <button className="link-btn" onClick={onEdit}>Editar</button>

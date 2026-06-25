@@ -28,6 +28,13 @@ export function buildWhere(f: TxFilters): { clause: string; params: unknown[] } 
     c.push("t.category_id = ?");
     p.push(f.categoryId);
   }
+  if (f.excludeCategoryIds && f.excludeCategoryIds.length) {
+    // Los movimientos sin categoría (NULL) se conservan: siguen siendo gasto.
+    c.push(
+      `(t.category_id IS NULL OR t.category_id NOT IN (${f.excludeCategoryIds.map(() => "?").join(",")}))`,
+    );
+    p.push(...f.excludeCategoryIds);
+  }
   if (f.subtype) {
     c.push("t.subtype = ?");
     p.push(f.subtype);

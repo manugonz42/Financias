@@ -101,7 +101,7 @@ export function Programados() {
 }
 
 function ScheduledForm({ row, onCancel, onSaved }: { row?: ScheduledRow; onCancel: () => void; onSaved: () => void }) {
-  const { categories } = useApp();
+  const { categories, iconStyle } = useApp();
   const [name, setName] = useState(row?.name ?? "");
   const [amount, setAmount] = useState(row ? String(row.amount) : "");
   const [categoryId, setCategoryId] = useState<number | "">(row?.category_id ?? "");
@@ -132,7 +132,7 @@ function ScheduledForm({ row, onCancel, onSaved }: { row?: ScheduledRow; onCance
       <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Importe" style={{ width: 110 }} />
       <select value={String(categoryId)} onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : "")}>
         <option value="">Sin categoría</option>
-        {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+        {categories.map((c) => <option key={c.id} value={c.id}>{iconStyle === "color" ? `${c.icon} ` : ""}{c.name}</option>)}
       </select>
       <select value={freq} onChange={(e) => setFreq(e.target.value as Frequency)}>
         <option value="mensual">Mensual</option>
