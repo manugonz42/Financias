@@ -1157,7 +1157,7 @@ dependencies = [
 
 [[package]]
 name = "financias"
-version = "0.11.0"
+version = "0.11.2"
 dependencies = [
  "serde",
  "serde_json",
