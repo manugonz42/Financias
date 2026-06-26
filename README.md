@@ -1,4 +1,10 @@
-# 💰 Financias
+﻿# 💰 Financias
+
+![Version](https://img.shields.io/badge/version-0.11.2-blue?style=for-the-badge)
+![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8DB?style=for-the-badge&logo=tauri)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
+![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)
 
 App de escritorio (nativa, multiplataforma) para controlar tus finanzas personales
 a partir de los extractos de movimientos en PDF de **Openbank**. Construida con
@@ -115,3 +121,4 @@ src-tauri/   Shell de Rust (plugins sql/dialog, comandos de fichero)
 1. Abre la app y ve a **Importar**.
 2. Selecciona uno o varios PDF de movimientos de Openbank.
 3. Revisa el resumen (nuevos / ya existentes) y explora el **Dashboard**.
+
