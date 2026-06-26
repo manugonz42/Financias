@@ -1,5 +1,7 @@
 ﻿# 💰 Financias
 
+> Desktop finance app — offline-first with auto-update
+
 ![Version](https://img.shields.io/badge/version-0.11.2-blue?style=for-the-badge)
 ![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8DB?style=for-the-badge&logo=tauri)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
@@ -12,6 +14,15 @@ a partir de los extractos de movimientos en PDF de **Openbank**. Construida con
 
 Todo funciona **en local y offline**: tus datos no salen de tu ordenador.
 
+---
+
+## 📸 Screenshot
+
+<!-- Añade aquí un screenshot del dashboard -->
+![Financias Dashboard](./assets/dashboard.png)
+
+---
+
 ## 🔒 Privacidad (importante)
 
 Este repositorio es **público**. Los extractos PDF y la base de datos contienen
@@ -23,6 +34,8 @@ datos personales (NIF, IBAN, historial), por eso el `.gitignore` evita subir:
 
 El código no contiene datos personales: el nombre del titular y los números de
 cuenta se leen del PDF al importar y se guardan **solo en tu base de datos local**.
+
+---
 
 ## ✨ Funcionalidades
 
@@ -41,6 +54,8 @@ cuenta se leen del PDF al importar y se guardan **solo en tu base de datos local
 - **Exportar a CSV** los movimientos filtrados.
 - Hueco preparado para **Inversiones** (futuro).
 
+---
+
 ## 🛠 Requisitos
 
 - [Node.js](https://nodejs.org) LTS (18+)
@@ -48,12 +63,16 @@ cuenta se leen del PDF al importar y se guardan **solo en tu base de datos local
 - **macOS**: Command Line Tools de Xcode (`xcode-select --install`)
 - **Windows**: "Desktop development with C++" (VS Build Tools) + WebView2 (ya viene en Win11)
 
+---
+
 ## ▶️ Ejecutar en desarrollo
 
 ```bash
 npm install
 npm run tauri dev
 ```
+
+---
 
 ## 📦 Compilar binario nativo
 
@@ -77,6 +96,8 @@ src-tauri/target/release/bundle/nsis/Financias_X.Y.Z_x64-setup.exe
 > Tauri **no** compila de Mac a Windows ni viceversa: genera cada binario en su
 > propio sistema operativo (o mediante CI, p.ej. GitHub Actions).
 
+---
+
 ## 💾 Instalar (Windows)
 
 Descarga `Financias_X.Y.Z_x64-setup.exe` de la
@@ -92,6 +113,8 @@ ofrece una casilla para **crear acceso directo en el escritorio** y **se autoact
 > Para tener auto-update, instala con el `-setup.exe`. Tus datos viven en
 > `%APPDATA%\com.manugonz.financias` y se conservan en cualquier caso.
 
+---
+
 ## ✅ Tests
 
 ```bash
@@ -101,6 +124,8 @@ npm test
 Incluye una validación del parser contra extractos reales que comprueba que el
 saldo encadena correctamente (parseo exacto) — los PDFs no se versionan, así que
 ese test se omite si no están presentes en local.
+
+---
 
 ## 🧱 Estructura
 
@@ -116,9 +141,30 @@ src/
 src-tauri/   Shell de Rust (plugins sql/dialog, comandos de fichero)
 ```
 
+---
+
 ## 📥 Cómo usar
 
 1. Abre la app y ve a **Importar**.
 2. Selecciona uno o varios PDF de movimientos de Openbank.
 3. Revisa el resumen (nuevos / ya existentes) y explora el **Dashboard**.
 
+---
+
+## 🤝 Contributing
+
+Las contribuciones son bienvenidas. Por favor, lee nuestra [Guía de Contribución](CONTRIBUTING.md) para más detalles.
+
+---
+
+## 📄 Licencia
+
+Este proyecto está licenciado bajo la MIT License — mira el archivo [LICENSE](LICENSE) para más detalles.
+
+---
+
+## 📫 Contacto
+
+Manuel González - [LinkedIn](https://linkedin.com/in/manugonz42) - manuel.gonzalez@example.com
+
+Project Link: [https://github.com/manugonz42/Financias](https://github.com/manugonz42/Financias)
