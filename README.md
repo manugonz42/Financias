@@ -2,11 +2,11 @@
 
 > Desktop finance app — offline-first with auto-update
 
-![Version](https://img.shields.io/badge/version-0.11.2-blue?style=for-the-badge)
-![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8DB?style=for-the-badge&logo=tauri)
-![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
-![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)
+![Version](https://img.shields.io/badge/version-0.11.2-7aa2f7?style=for-the-badge&labelColor=1a1b26)
+![Tauri](https://img.shields.io/badge/Tauri-2.0-7aa2f7?style=for-the-badge&logo=tauri&labelColor=1a1b26)
+![React](https://img.shields.io/badge/React-18-bb9af7?style=for-the-badge&logo=react&labelColor=1a1b26)
+![SQLite](https://img.shields.io/badge/SQLite-3-9ece6a?style=for-the-badge&logo=sqlite&labelColor=1a1b26)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-73daca?style=for-the-badge&logo=typescript&labelColor=1a1b26)
 
 App de escritorio (nativa, multiplataforma) para controlar tus finanzas personales
 a partir de los extractos de movimientos en PDF de **Openbank**. Construida con
