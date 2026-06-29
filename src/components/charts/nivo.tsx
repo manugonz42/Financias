@@ -1,7 +1,7 @@
 // Gráficos con Nivo (rosco, barras, líneas, efectivo). Leen los tokens del tema
 // activo (claro/oscuro) y se reaniman al entrar. Sustituyen a ECharts.
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { ResponsivePie } from "@nivo/pie";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsiveLine } from "@nivo/line";
@@ -606,31 +606,68 @@ export function NivoBalance({ points, name, palette }: { points: BalancePoint[];
 /* ---------------------------------------- Línea minimalista: saldo/patrimonio */
 
 /**
+ * Convierte puntos de control catmull-rom a un path SVG cubic bezier suave.
+ * tension: 0 = lineal, 0.5 = catmull-rom estándar, 1 = muy redondeado.
+ */
+function catmullRomToBezier(pts: { x: number; y: number }[], tension = 0.5): string {
+  if (pts.length < 2) return "";
+  if (pts.length === 2) return `M${pts[0].x},${pts[0].y} L${pts[1].x},${pts[1].y}`;
+
+  const d: string[] = [`M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`];
+
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(i - 1, 0)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(i + 2, pts.length - 1)];
+
+    const cp1x = p1.x + (p2.x - p0.x) * tension / 3;
+    const cp1y = p1.y + (p2.y - p0.y) * tension / 3;
+    const cp2x = p2.x - (p3.x - p1.x) * tension / 3;
+    const cp2y = p2.y - (p3.y - p1.y) * tension / 3;
+
+    d.push(`C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`);
+  }
+
+  return d.join(" ");
+}
+
+/**
  * Widget de evolución de saldo con diseño 100% minimalista editorial.
- * SVG custom: línea fina, área sutil, eje limpio, sin grid, sin glow.
+ * SVG custom: línea curva suave, área sutil, sin ejes visibles.
+ * Incluye luz animada con estela que recorre la línea (toggleable).
  * Se usa solo cuando el tema es minimalista o minimalist-dark.
  */
 export function NivoBalanceMinimalist({
   points,
-  name,
+  name: _name,
   palette,
+  hoveredIdx: _hoveredIdx,
+  onHover,
 }: {
   points: BalancePoint[];
   name: string;
   palette?: string[] | null;
+  hoveredIdx?: number | null;
+  onHover?: (idx: number | null) => void;
 }) {
   const dark = isDarkTheme();
   const fg = dark ? "#f0efec" : "#111111";
   const fgDim = dark ? "#6a6862" : "#787774";
-  const fgFaint = dark ? "rgba(240,239,236,0.06)" : "rgba(17,17,17,0.05)";
   const lineColor = palette && palette.length ? palette[0] : fg;
 
-  // Layout
+  // Layout — sin padding de ejes
   const W = 600;
-  const H = 260;
-  const pad = { top: 20, right: 16, bottom: 36, left: 52 };
+  const H = 220;
+  const pad = { top: 16, right: 16, bottom: 16, left: 16 };
   const cw = W - pad.left - pad.right;
   const ch = H - pad.top - pad.bottom;
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   if (points.length === 0) return <Fill><div style={{ color: fgDim }}>Sin datos.</div></Fill>;
 
@@ -638,113 +675,138 @@ export function NivoBalanceMinimalist({
   const yMin = Math.min(...values);
   const yMax = Math.max(...values);
   const yRange = yMax - yMin || 1;
-  const yPad = yRange * 0.08;
+  const yPad = yRange * 0.1;
   const yLo = yMin - yPad;
   const yHi = yMax + yPad;
 
   const xScale = (i: number) => pad.left + (i / Math.max(points.length - 1, 1)) * cw;
   const yScale = (v: number) => pad.top + ch - ((v - yLo) / (yHi - yLo)) * ch;
 
-  // Path de la línea
-  const linePath = points
-    .map((p, i) => `${i === 0 ? "M" : "L"}${xScale(i).toFixed(1)},${yScale(p.saldo).toFixed(1)}`)
-    .join(" ");
+  // Puntos escalados para curva catmull-rom
+  const scaledPts = points.map((p, i) => ({ x: xScale(i), y: yScale(p.saldo) }));
+  const curvedPath = catmullRomToBezier(scaledPts, 0.6);
 
-  // Path del área (bajo la línea)
+  // Path del área (bajo la curva)
+  const last = scaledPts[scaledPts.length - 1];
+  const first = scaledPts[0];
   const areaPath =
-    linePath +
-    ` L${xScale(points.length - 1).toFixed(1)},${(pad.top + ch).toFixed(1)}` +
-    ` L${xScale(0).toFixed(1)},${(pad.top + ch).toFixed(1)} Z`;
+    curvedPath +
+    ` L${last.x.toFixed(1)},${(pad.top + ch).toFixed(1)}` +
+    ` L${first.x.toFixed(1)},${(pad.top + ch).toFixed(1)} Z`;
 
-  // Ticks del eje Y (4 ticks uniformes)
-  const yTicks = 4;
-  const yTickValues = Array.from({ length: yTicks }, (_, i) => yLo + ((i / (yTicks - 1)) * (yHi - yLo)));
+  // Tooltip: punto más cercano al mouse
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [tip, setTip] = useState<{ x: number; y: number; idx: number } | null>(null);
 
-  // Ticks del eje X (mensuales, máx ~8 labels)
-  const xStep = Math.max(1, Math.ceil(points.length / 8));
-  const xTicks = points.filter((_, i) => i % xStep === 0);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!svgRef.current || points.length === 0) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left) / rect.width) * W;
+    // Encontrar índice más cercano
+    let closest = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < scaledPts.length; i++) {
+      const d = Math.abs(scaledPts[i].x - svgX);
+      if (d < minDist) { minDist = d; closest = i; }
+    }
+    setTip({ x: e.clientX - rect.left, y: e.clientY - rect.top, idx: closest });
+    onHover?.(closest);
+  };
+
+  const handleMouseLeave = () => { setTip(null); onHover?.(null); };
+
+  const tipPt = tip ? points[tip.idx] : null;
 
   return (
     <Fill>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="xMidYMid meet"
-        style={{ width: "100%", height: "100%", fontFamily: "var(--font-mono)" }}
-      >
-        {/* Label sutil del nombre */}
-        <text
-          x={W - pad.right}
-          y={12}
-          textAnchor="end"
-          style={{ fill: fgDim, fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: "0.04em", textTransform: "uppercase" }}
+      <div style={{ position: "relative", width: "100%", height: "100%", opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(8px)", transition: "opacity 400ms ease-out, transform 400ms ease-out" }}>
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="xMidYMid meet"
+          style={{ width: "100%", height: "100%", fontFamily: "var(--font-mono)" }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
         >
-          {name}
-        </text>
+          <defs>
+            {/* Degradado vertical para el área: lineColor → transparente */}
+            <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={lineColor} stopOpacity={0.18} />
+              <stop offset="100%" stopColor={lineColor} stopOpacity={0.01} />
+            </linearGradient>
+          </defs>
 
-        {/* Área sutil bajo la curva */}
-        <path d={areaPath} fill={fgFaint} />
+          {/* Área con degradado bajo la curva */}
+          <path d={areaPath} fill="url(#area-grad)" />
 
-        {/* Línea principal */}
-        <path
-          d={linePath}
-          fill="none"
-          stroke={lineColor}
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Eje Y: ticks y labels */}
-        {yTickValues.map((v, i) => (
-          <g key={`yt${i}`}>
-            <line
-              x1={pad.left}
-              y1={yScale(v)}
-              x2={pad.left + cw}
-              y2={yScale(v)}
-              stroke={fgFaint}
-              strokeWidth={0.5}
-            />
-            <text
-              x={pad.left - 8}
-              y={yScale(v)}
-              textAnchor="end"
-              dominantBaseline="middle"
-              style={{ fill: fgDim, fontSize: 10, fontFamily: "var(--font-mono)" }}
-            >
-              {Math.round(v).toLocaleString("es-ES")}
-            </text>
-          </g>
-        ))}
-
-        {/* Eje X: labels de mes */}
-        {xTicks.map((p, i) => {
-          const idx = points.indexOf(p);
-          return (
-            <text
-              key={`xt${i}`}
-              x={xScale(idx)}
-              y={H - 8}
-              textAnchor="middle"
-              style={{ fill: fgDim, fontSize: 10, fontFamily: "var(--font-mono)" }}
-            >
-              {monthLabelShort(p.month)}
-            </text>
-          );
-        })}
-
-        {/* Puntos de interacción (invisible, para tooltip via hover) */}
-        {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={xScale(i)}
-            cy={yScale(p.saldo)}
-            r={12}
-            fill="transparent"
-            className="balance-minimalist-dot"
+          {/* Línea principal curva */}
+          <path
+            d={curvedPath}
+            fill="none"
+            stroke={lineColor}
+            strokeWidth={2}
+            strokeLinecap="round"
           />
-        ))}
-      </svg>
+
+          {/* Hover: rect invisible para capturar mouse */}
+          <rect
+            x={pad.left}
+            y={pad.top}
+            width={cw}
+            height={ch}
+            fill="transparent"
+            style={{ cursor: "crosshair" }}
+          />
+
+          {/* Hover: línea vertical + punto */}
+          {tip && (
+            <g>
+              <line
+                x1={scaledPts[tip.idx].x}
+                y1={pad.top}
+                x2={scaledPts[tip.idx].x}
+                y2={pad.top + ch}
+                stroke={fgDim}
+                strokeWidth={0.5}
+                strokeDasharray="3,3"
+              />
+              <circle
+                cx={scaledPts[tip.idx].x}
+                cy={scaledPts[tip.idx].y}
+                r={4}
+                fill={fg}
+                stroke={dark ? "#1a1a18" : "#FFFFFF"}
+                strokeWidth={2}
+              />
+            </g>
+          )}
+        </svg>
+
+        {/* Tooltip flotante */}
+        {tip && tipPt && (
+          <div
+            style={{
+              position: "absolute",
+              left: Math.min(tip.x + 12, (svgRef.current?.getBoundingClientRect().width ?? 300) - 120),
+              top: tip.y - 40,
+              background: dark ? "#1a1a18" : "#FFFFFF",
+              border: "1px solid #EAEAEA",
+              borderRadius: 8,
+              padding: "6px 10px",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              color: fg,
+              pointerEvents: "none",
+              whiteSpace: "nowrap",
+              zIndex: 10,
+            }}
+          >
+            <span style={{ color: fgDim }}>{monthLabelShort(tipPt.month)}</span>
+            <span style={{ margin: "0 4px", color: fgDim }}>·</span>
+            <span>{formatEUR(tipPt.saldo)}</span>
+          </div>
+        )}
+      </div>
     </Fill>
   );
 }

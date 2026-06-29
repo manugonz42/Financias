@@ -249,3 +249,33 @@ export async function kpis(f: TxFilters): Promise<KpiSummary> {
   const savingsRate = income > 0 ? (net / income) * 100 : 0;
   return { expense, income, net, savingsRate };
 }
+
+/* ---- Debug: desglose de ingresos por categoría y mes ---- */
+
+export interface IncomeDebugRow {
+  month: string;
+  category: string;
+  kind: string | null;
+  cnt: number;
+  total: number;
+}
+
+export async function debugIncomeBreakdown(from?: string, to?: string): Promise<IncomeDebugRow[]> {
+  const conditions = ["t.importe > 0", "t.is_internal = 0"];
+  const params: string[] = [];
+  if (from) { conditions.push("t.fecha_operacion >= ?"); params.push(from); }
+  if (to) { conditions.push("t.fecha_operacion <= ?"); params.push(to); }
+  return query<IncomeDebugRow>(
+    `SELECT substr(t.fecha_operacion, 1, 7) AS month,
+            COALESCE(c.name, '(sin categoría)') AS category,
+            c.kind,
+            COUNT(*) AS cnt,
+            ROUND(SUM(t.importe), 2) AS total
+     FROM transactions t
+     LEFT JOIN categories c ON c.id = t.category_id
+     WHERE ${conditions.join(" AND ")}
+     GROUP BY month, c.name
+     ORDER BY month, total DESC`,
+    params,
+  );
+}

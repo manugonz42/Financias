@@ -8,7 +8,7 @@ import { BarStyleMenu } from "../components/BarStyleMenu";
 import { useChartPalette } from "../components/charts/useChartPalette";
 import { useBarStyle } from "../components/charts/useBarStyle";
 import { formatEUR, monthKey } from "../lib/format";
-import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions, dailySpend } from "../data/stats";
+import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions, dailySpend, debugIncomeBreakdown, type IncomeDebugRow } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
 import { listGoals } from "../data/goals";
 import { listScheduled, type ScheduledRow } from "../data/scheduled";
@@ -310,10 +310,59 @@ const BalanceLineBody: FC<WidgetProps> = (p) => {
   const tM = to.slice(0, 7);
   const points = data.filter((pt) => pt.month >= fM && pt.month <= tM);
   const name = p.accountId === "all" ? "Patrimonio neto" : "Saldo";
+  const current = points.length > 0 ? points[points.length - 1].saldo : null;
+  const first = points.length > 0 ? points[0].saldo : null;
+  const delta = current !== null && first !== null && first !== 0
+    ? ((current - first) / Math.abs(first)) * 100
+    : null;
+  const deltaAbs = current !== null && first !== null ? current - first : null;
+  const deltaUp = delta !== null && delta >= 0;
+
   return (
     <>
       {isMinimalist ? (
-        <NivoBalanceMinimalist points={points} name={name} palette={colors} />
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          {/* KPI header */}
+          {current !== null && (
+            <div style={{ padding: "8px 16px 0", display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 28, fontWeight: 500, letterSpacing: "-0.02em", lineHeight: 1 }}>
+                {formatEUR(current)}
+              </span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.04em", textTransform: "uppercase", opacity: 0.5 }}>
+                {name}
+              </span>
+              {deltaAbs !== null && (
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 500, letterSpacing: "-0.02em", lineHeight: 1, color: deltaUp ? "var(--good)" : "var(--bad)" }}>
+                  {deltaUp ? "+" : ""}{formatEUR(deltaAbs)}
+                </span>
+              )}
+              {delta !== null && (
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 9,
+                    fontWeight: 600,
+                    letterSpacing: "0.02em",
+                    color: deltaUp ? "var(--good)" : "var(--bad)",
+                    background: `color-mix(in srgb, ${deltaUp ? "var(--good)" : "var(--bad)"} 14%, transparent)`,
+                    borderRadius: 9999,
+                    padding: "1px 6px",
+                    lineHeight: "16px",
+                  }}
+                >
+                  {deltaUp ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}%
+                </span>
+              )}
+            </div>
+          )}
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <NivoBalanceMinimalist
+              points={points}
+              name={name}
+              palette={colors}
+            />
+          </div>
+        </div>
       ) : (
         <NivoBalance points={points} name={name} palette={colors} />
       )}
@@ -716,6 +765,51 @@ const CatCompareBarsBody: FC<WidgetProps> = (p) => {
   );
 };
 
+/* ---- Debug: desglose de ingresos por categoría ---- */
+const IncomeDebugBody: FC<WidgetProps> = (p) => {
+  const [rows, setRows] = useState<IncomeDebugRow[]>([]);
+  const [range, setRange] = useState<{ from: string; to: string } | null>(null);
+  const from = range?.from ?? p.from;
+  const to = range?.to ?? p.to;
+  useEffect(() => { void debugIncomeBreakdown(from, to).then(setRows); }, [from, to, p.version]);
+  if (rows.length === 0) return <span className="muted">Sin datos.</span>;
+  return (
+    <div className="widget" style={{ gap: 6 }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, lineHeight: 1.5, overflowX: "auto", flex: 1, minHeight: 0 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ textAlign: "left", borderBottom: "1px solid #EAEAEA", color: "var(--text-dim, #787774)" }}>
+              <th style={{ padding: "4px 8px" }}>Mes</th>
+              <th style={{ padding: "4px 8px" }}>Categoría</th>
+              <th style={{ padding: "4px 8px" }}>Kind</th>
+              <th style={{ padding: "4px 8px", textAlign: "right" }}>N</th>
+              <th style={{ padding: "4px 8px", textAlign: "right" }}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                <td style={{ padding: "3px 8px" }}>{r.month}</td>
+                <td style={{ padding: "3px 8px" }}>{r.category}</td>
+                <td style={{ padding: "3px 8px", opacity: 0.6 }}>{r.kind ?? "—"}</td>
+                <td style={{ padding: "3px 8px", textAlign: "right" }}>{r.cnt}</td>
+                <td style={{ padding: "3px 8px", textAlign: "right", color: r.total >= 0 ? "var(--good)" : "var(--bad)" }}>
+                  {formatEUR(r.total)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {p.headerSlot &&
+        createPortal(
+          <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => setRange({ from: f, to: t })} />,
+          p.headerSlot,
+        )}
+    </div>
+  );
+};
+
 export interface WidgetDef {
   key: string;
   title: string;
@@ -742,4 +836,5 @@ export const WIDGETS: WidgetDef[] = [
   { key: "subs", title: "Pagos recurrentes", w: 6, h: 7, Body: SubscriptionsBody },
   { key: "calendar", title: "Gasto diario (calendario)", w: 8, h: 6, Body: CalendarBody },
   { key: "sunburst", title: "Categorías (sunburst)", w: 6, h: 10, Body: SunburstBody },
+  { key: "debug_income", title: "DEBUG: Ingresos por categoría", w: 8, h: 8, Body: IncomeDebugBody },
 ];
