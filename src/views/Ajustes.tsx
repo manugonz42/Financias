@@ -5,14 +5,25 @@ import type { IconStyle } from "../lib/icons";
 import { ExcludeInternalToggle } from "../components/Controls";
 import { CategoryManager } from "../components/CategoryManager";
 import { ManualAccounts } from "../components/ManualAccounts";
-import { getOwnerName, setSetting } from "../data/settings";
+import { getOwnerName, setSetting, type Theme } from "../data/settings";
 import { listAccounts, currentBalance, accountTypeLabel, addBalanceSnapshot } from "../data/accounts";
 import { resetData } from "../db/database";
 import { formatEUR } from "../lib/format";
 import type { Account } from "../types";
 
+const THEMES: { id: Theme; label: string; desc: string }[] = [
+  { id: "dark", label: "Oscuro", desc: "Near-black estilo Linear" },
+  { id: "light", label: "Claro", desc: "Gris frio neutro" },
+  { id: "minimalist", label: "Minimalista", desc: "Monocromatico warm, editorial" },
+];
+
+const MINIMALIST_MODES: { id: "minimalist" | "minimalist-dark"; label: string }[] = [
+  { id: "minimalist", label: "Claro" },
+  { id: "minimalist-dark", label: "Oscuro" },
+];
+
 export function Ajustes() {
-  const { reload, palette, setPalette, iconStyle, setIconStyle, toast } = useApp();
+  const { reload, theme, setTheme, palette, setPalette, iconStyle, setIconStyle, toast } = useApp();
   const [owner, setOwner] = useState("");
   const [accounts, setAccounts] = useState<Array<Account & { balance: number }>>([]);
   const [confirming, setConfirming] = useState(false);
@@ -95,12 +106,65 @@ export function Ajustes() {
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3>Análisis</h3>
+        <h3>Analisis</h3>
         <ExcludeInternalToggle />
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3>Paleta de gráficos</h3>
+        <h3>Estilo visual</h3>
+        <p className="muted" style={{ fontSize: 13 }}>
+          Selecciona el tema visual de la aplicacion. Cada tema cambia colores,
+          fuentes y estilo de los graficos.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 12 }}>
+          {THEMES.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTheme(t.id)}
+              style={{
+                padding: "14px 12px",
+                borderRadius: 8,
+                border: (theme === t.id || (t.id === "minimalist" && (theme === "minimalist" || theme === "minimalist-dark")))
+                  ? "2px solid var(--accent)"
+                  : "1px solid var(--border)",
+                background: (theme === t.id || (t.id === "minimalist" && (theme === "minimalist" || theme === "minimalist-dark")))
+                  ? "var(--bg-elev)"
+                  : "var(--bg-card)",
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{t.label}</div>
+              <div style={{ fontSize: 12, color: "var(--text-dim)" }}>{t.desc}</div>
+            </button>
+          ))}
+        </div>
+        {/* Sub-toggle para variante claro/oscuro del minimalista */}
+        {(theme === "minimalist" || theme === "minimalist-dark") && (
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            {MINIMALIST_MODES.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setTheme(m.id)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 6,
+                  border: theme === m.id ? "2px solid var(--accent)" : "1px solid var(--border)",
+                  background: theme === m.id ? "var(--bg-elev)" : "var(--bg-card)",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: theme === m.id ? 600 : 400,
+                }}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3>Paleta de graficos</h3>
         <p className="muted" style={{ fontSize: 13 }}>
           Paleta por defecto de los gráficos del dashboard. Cada widget puede
           sobreescribirla con su botón 🎨.
@@ -120,9 +184,9 @@ export function Ajustes() {
       <div className="card" style={{ marginBottom: 16 }}>
         <h3>Estilo de iconos</h3>
         <p className="muted" style={{ fontSize: 13 }}>
-          «Color» usa los iconos actuales (barra lateral en color y emojis de
-          categoría). «Lineal» los sustituye por iconos de línea monocromos que se
-          adaptan al tema claro/oscuro.
+          "Color" usa los iconos actuales (barra lateral en color y emojis de
+          categoria). "Lineal" los sustituye por iconos de linea monocromos de Lucide.
+          "Phosphor" usa la libreria Phosphor Icons (bold), ideal con el estilo minimalista.
         </p>
         <div className="row" style={{ gap: 8 }}>
           <select
@@ -130,7 +194,8 @@ export function Ajustes() {
             onChange={(e) => setIconStyle(e.target.value as IconStyle)}
           >
             <option value="color">Color</option>
-            <option value="linear">Lineal</option>
+            <option value="linear">Lineal (Lucide)</option>
+            <option value="phosphor">Phosphor</option>
           </select>
         </div>
       </div>

@@ -55,16 +55,17 @@ function useNivoTheme() {
 
 /** Caja de tooltip uniforme y elegante para todos los gráficos. */
 function Tip({ children }: { children: React.ReactNode }) {
+  const minimal = isMinimalistTheme();
   return (
     <div
       style={{
-        background: "var(--bg-card)",
+        background: minimal ? "var(--bg-card)" : "var(--bg-card)",
         color: "var(--text)",
         border: "1px solid var(--border)",
-        borderRadius: 8,
+        borderRadius: minimal ? 6 : 8,
         padding: "6px 10px",
         fontSize: 12,
-        boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+        boxShadow: minimal ? "none" : "0 6px 18px rgba(0,0,0,0.35)",
         whiteSpace: "nowrap",
       }}
     >
@@ -189,6 +190,7 @@ export function NivoDonut({
 }) {
   const theme = useNivoTheme();
   const text = cssVar("--text", "#e2e8f0");
+  const minimal = isMinimalistTheme();
 
   // Datos completos para la leyenda; los visibles para el gráfico.
   const allData: PieDatum[] = slices.map((s, i) => ({
@@ -220,10 +222,10 @@ export function NivoDonut({
       innerRadius={0.6}
       padAngle={0.3}
       cornerRadius={2}
-      activeOuterRadiusOffset={8}
+      activeOuterRadiusOffset={minimal ? 3 : 8}
       colors={{ datum: "data.color" }}
-      borderWidth={1.5}
-      borderColor={{ from: "color", modifiers: [["darker", 0.5]] }}
+      borderWidth={minimal ? 0.5 : 1.5}
+      borderColor={minimal ? "none" : { from: "color", modifiers: [["darker", 0.5]] }}
       enableArcLabels={false}
       enableArcLinkLabels={false}
       motionConfig="gentle"
@@ -342,16 +344,22 @@ export function NivoDonut({
 
 export function NivoFlows({ rows, palette, style }: { rows: MonthlyFlow[]; palette?: string[] | null; style: BarStyle }) {
   const theme = withMonoTicks(useNivoTheme());
+  const minimal = isMinimalistTheme();
+  const dark = isDarkTheme();
   const data = rows.map((r) => ({
     month: monthLabelShort(r.month),
     Gastos: +r.expense.toFixed(2),
     Ingresos: +r.income.toFixed(2),
   }));
-  const expense = palette && palette.length ? palette[0] : EXPENSE;
-  const income = palette && palette.length > 1 ? palette[1] : (palette && palette.length ? palette[0] : INCOME);
-  const { colors, defs, fill } = barFills(style, ["Gastos", "Ingresos"], [expense, income]);
-  // Estilo "Linear": sin rejilla, barras esbeltas y redondeadas; relleno (plano o
-  // degradado) y colores según el estilo elegido.
+  // Minimalista: blanco y negro puro. Gastos = negro/oscuro, Ingresos = gris claro.
+  const expense = minimal
+    ? (dark ? "#f0efec" : "#111111")
+    : (palette && palette.length ? palette[0] : EXPENSE);
+  const income = minimal
+    ? (dark ? "#6a6862" : "#a09e98")
+    : (palette && palette.length > 1 ? palette[1] : (palette && palette.length ? palette[0] : INCOME));
+  const effectiveStyle = minimal ? { ...style, fill: "flat" as const } : style;
+  const { colors, defs, fill } = barFills(effectiveStyle, ["Gastos", "Ingresos"], [expense, income]);
   return (
     <Fill>
       <ResponsiveBar
@@ -361,13 +369,13 @@ export function NivoFlows({ rows, palette, style }: { rows: MonthlyFlow[]; palet
         indexBy="month"
         groupMode="grouped"
         margin={{ top: 28, right: 16, bottom: 28, left: 52 }}
-        padding={0.4}
-        innerPadding={3}
-        borderRadius={6}
+        padding={minimal ? 0.55 : 0.4}
+        innerPadding={minimal ? 3 : 3}
+        borderRadius={minimal ? 2 : 6}
         colors={colors}
         defs={defs}
         fill={fill}
-        layers={style.fill === "neon" ? NEON_LAYERS : undefined}
+        layers={!minimal && style.fill === "neon" ? NEON_LAYERS : undefined}
         enableLabel={false}
         enableGridX={false}
         enableGridY={false}
@@ -411,10 +419,15 @@ export function NivoCategoryCompare({
 }) {
   const theme = withMonoTicks(useNivoTheme());
   const { iconStyle } = useApp();
-  // Colores intrínsecos en modo monocromo: pasado = gris atenuado, este mes = primer
-  // plano (blanco/negro según el tema). El estilo elegido puede sustituirlos.
-  const intrinsic: [string, string] = [cssVar("--text-dim", "#8a8f98"), cssVar("--text", "#f7f8f8")];
-  const { colors, defs, fill } = barFills(style, ["Pasado", "Este mes"], intrinsic);
+  const minimal = isMinimalistTheme();
+  const dark = isDarkTheme();
+  // Minimalista: blanco y negro puro. Pasado = gris medio, Este mes = negro/blanco.
+  const intrinsic: [string, string] = minimal
+    ? [dark ? "#6a6862" : "#a09e98", dark ? "#f0efec" : "#111111"]
+    : [cssVar("--text-dim", "#8a8f98"), cssVar("--text", "#f7f8f8")];
+  // En minimalista siempre "flat".
+  const effectiveStyle = minimal ? { ...style, fill: "flat" as const } : style;
+  const { colors, defs, fill } = barFills(effectiveStyle, ["Pasado", "Este mes"], intrinsic);
   const pct = mode === "pct";
   const totalPrev = rows.reduce((s, r) => s + r.prev, 0) || 1;
   const totalNow = rows.reduce((s, r) => s + r.now, 0) || 1;
@@ -434,13 +447,13 @@ export function NivoCategoryCompare({
         indexBy="name"
         groupMode="grouped"
         margin={{ top: 28, right: 16, bottom: 34, left: 48 }}
-        padding={0.42}
-        innerPadding={3}
-        borderRadius={6}
+        padding={minimal ? 0.55 : 0.42}
+        innerPadding={minimal ? 3 : 3}
+        borderRadius={minimal ? 2 : 6}
         colors={colors}
         defs={defs}
         fill={fill}
-        layers={style.fill === "neon" ? NEON_LAYERS : undefined}
+        layers={!minimal && style.fill === "neon" ? NEON_LAYERS : undefined}
         enableLabel={false}
         enableGridX={false}
         enableGridY={false}
@@ -484,25 +497,43 @@ export function NivoCategoryCompare({
   );
 }
 
+function isMinimalistTheme() {
+  if (typeof document === "undefined") return false;
+  const t = document.documentElement.getAttribute("data-theme");
+  return t === "minimalist" || t === "minimalist-dark";
+}
+
+function isDarkTheme() {
+  if (typeof document === "undefined") return true;
+  const t = document.documentElement.getAttribute("data-theme");
+  return t !== "light" && t !== "minimalist";
+}
+
 /* ------------------------------------------------- Línea: saldo/patrimonio */
 
 // Capa personalizada: dibuja la curva con trazo en degradado (url) y un glow sutil.
-const GlowLine = ({ series, lineGenerator }: any) =>
-  series.map((s: any) => (
+// En modo minimalista: trazo fino sin glow, color sólido.
+const GlowLine = ({ series, lineGenerator }: any) => {
+  const minimal = isMinimalistTheme();
+  const dark = isDarkTheme();
+  return series.map((s: any) => (
     <path
       key={s.id}
       d={lineGenerator(s.data.map((d: any) => d.position))}
       fill="none"
-      stroke="url(#lineGradient)"
-      strokeWidth={2.25}
+      stroke={minimal ? (dark ? "#f0efec" : "#111111") : "url(#lineGradient)"}
+      strokeWidth={minimal ? 1.5 : 2.25}
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ filter: "drop-shadow(0 1px 5px rgba(94,106,210,0.5))" }}
+      style={minimal ? {} : { filter: "drop-shadow(0 1px 5px rgba(94,106,210,0.5))" }}
     />
   ));
+};
 
 export function NivoBalance({ points, name, palette }: { points: BalancePoint[]; name: string; palette?: string[] | null }) {
   const theme = useNivoTheme();
+  const minimal = isMinimalistTheme();
+  const dark = isDarkTheme();
   const color = palette && palette.length ? palette[0] : cssVar("--accent", "#6366f1");
   const data = [
     {
@@ -510,6 +541,11 @@ export function NivoBalance({ points, name, palette }: { points: BalancePoint[];
       data: points.map((p) => ({ x: monthLabelShort(p.month), y: +p.saldo.toFixed(2) })),
     },
   ];
+
+  // En modo minimalista: área sutil con color sólido, sin gradiente complejo.
+  const areaOpacity = minimal ? 0.06 : 0;
+  const lineColor = minimal ? (dark ? "#f0efec" : "#111111") : color;
+
   return (
     <Fill>
       <ResponsiveLine
@@ -519,28 +555,32 @@ export function NivoBalance({ points, name, palette }: { points: BalancePoint[];
         xScale={{ type: "point" }}
         yScale={{ type: "linear", min: "auto", max: "auto" }}
         curve="monotoneX"
-        colors={[color]}
-        lineWidth={3}
+        colors={[lineColor]}
+        lineWidth={minimal ? 1.5 : 3}
         enablePoints={false}
         enableArea
-        areaOpacity={1}
-        defs={[
-          linearGradientDef("balanceArea", [
-            { offset: 0, color: "#a855f7", opacity: 0.4 },
-            { offset: 60, color: "#6366f1", opacity: 0.18 },
-            { offset: 100, color: "#22d3ee", opacity: 0 },
-          ]),
-          linearGradientDef(
-            "lineGradient",
-            [
-              { offset: 0, color: "#22d3ee" },
-              { offset: 50, color: "#6366f1" },
-              { offset: 100, color: "#a855f7" },
-            ],
-            { x1: "0", y1: "0", x2: "1", y2: "0" },
-          ),
-        ]}
-        fill={[{ match: "*", id: "balanceArea" }]}
+        areaOpacity={minimal ? areaOpacity : 1}
+        defs={
+          minimal
+            ? []
+            : [
+                linearGradientDef("balanceArea", [
+                  { offset: 0, color: "#a855f7", opacity: 0.4 },
+                  { offset: 60, color: "#6366f1", opacity: 0.18 },
+                  { offset: 100, color: "#22d3ee", opacity: 0 },
+                ]),
+                linearGradientDef(
+                  "lineGradient",
+                  [
+                    { offset: 0, color: "#22d3ee" },
+                    { offset: 50, color: "#6366f1" },
+                    { offset: 100, color: "#a855f7" },
+                  ],
+                  { x1: "0", y1: "0", x2: "1", y2: "0" },
+                ),
+              ]
+        }
+        fill={minimal ? [] : [{ match: "*", id: "balanceArea" }]}
         layers={["grid", "markers", "axes", "areas", "crosshair", GlowLine, "points", "slices", "mesh", "legends"]}
         enableGridX={false}
         enableGridY={false}
@@ -553,7 +593,7 @@ export function NivoBalance({ points, name, palette }: { points: BalancePoint[];
           const pt = slice.points[0];
           return (
             <Tip>
-              <Swatch color={color} />
+              <Swatch color={lineColor} />
               {String(pt.data.x)} · <b>{formatEUR(Number(pt.data.y))}</b>
             </Tip>
           );
@@ -563,11 +603,161 @@ export function NivoBalance({ points, name, palette }: { points: BalancePoint[];
   );
 }
 
+/* ---------------------------------------- Línea minimalista: saldo/patrimonio */
+
+/**
+ * Widget de evolución de saldo con diseño 100% minimalista editorial.
+ * SVG custom: línea fina, área sutil, eje limpio, sin grid, sin glow.
+ * Se usa solo cuando el tema es minimalista o minimalist-dark.
+ */
+export function NivoBalanceMinimalist({
+  points,
+  name,
+  palette,
+}: {
+  points: BalancePoint[];
+  name: string;
+  palette?: string[] | null;
+}) {
+  const dark = isDarkTheme();
+  const fg = dark ? "#f0efec" : "#111111";
+  const fgDim = dark ? "#6a6862" : "#787774";
+  const fgFaint = dark ? "rgba(240,239,236,0.06)" : "rgba(17,17,17,0.05)";
+  const lineColor = palette && palette.length ? palette[0] : fg;
+
+  // Layout
+  const W = 600;
+  const H = 260;
+  const pad = { top: 20, right: 16, bottom: 36, left: 52 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+
+  if (points.length === 0) return <Fill><div style={{ color: fgDim }}>Sin datos.</div></Fill>;
+
+  const values = points.map((p) => p.saldo);
+  const yMin = Math.min(...values);
+  const yMax = Math.max(...values);
+  const yRange = yMax - yMin || 1;
+  const yPad = yRange * 0.08;
+  const yLo = yMin - yPad;
+  const yHi = yMax + yPad;
+
+  const xScale = (i: number) => pad.left + (i / Math.max(points.length - 1, 1)) * cw;
+  const yScale = (v: number) => pad.top + ch - ((v - yLo) / (yHi - yLo)) * ch;
+
+  // Path de la línea
+  const linePath = points
+    .map((p, i) => `${i === 0 ? "M" : "L"}${xScale(i).toFixed(1)},${yScale(p.saldo).toFixed(1)}`)
+    .join(" ");
+
+  // Path del área (bajo la línea)
+  const areaPath =
+    linePath +
+    ` L${xScale(points.length - 1).toFixed(1)},${(pad.top + ch).toFixed(1)}` +
+    ` L${xScale(0).toFixed(1)},${(pad.top + ch).toFixed(1)} Z`;
+
+  // Ticks del eje Y (4 ticks uniformes)
+  const yTicks = 4;
+  const yTickValues = Array.from({ length: yTicks }, (_, i) => yLo + ((i / (yTicks - 1)) * (yHi - yLo)));
+
+  // Ticks del eje X (mensuales, máx ~8 labels)
+  const xStep = Math.max(1, Math.ceil(points.length / 8));
+  const xTicks = points.filter((_, i) => i % xStep === 0);
+
+  return (
+    <Fill>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ width: "100%", height: "100%", fontFamily: "var(--font-mono)" }}
+      >
+        {/* Label sutil del nombre */}
+        <text
+          x={W - pad.right}
+          y={12}
+          textAnchor="end"
+          style={{ fill: fgDim, fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: "0.04em", textTransform: "uppercase" }}
+        >
+          {name}
+        </text>
+
+        {/* Área sutil bajo la curva */}
+        <path d={areaPath} fill={fgFaint} />
+
+        {/* Línea principal */}
+        <path
+          d={linePath}
+          fill="none"
+          stroke={lineColor}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Eje Y: ticks y labels */}
+        {yTickValues.map((v, i) => (
+          <g key={`yt${i}`}>
+            <line
+              x1={pad.left}
+              y1={yScale(v)}
+              x2={pad.left + cw}
+              y2={yScale(v)}
+              stroke={fgFaint}
+              strokeWidth={0.5}
+            />
+            <text
+              x={pad.left - 8}
+              y={yScale(v)}
+              textAnchor="end"
+              dominantBaseline="middle"
+              style={{ fill: fgDim, fontSize: 10, fontFamily: "var(--font-mono)" }}
+            >
+              {Math.round(v).toLocaleString("es-ES")}
+            </text>
+          </g>
+        ))}
+
+        {/* Eje X: labels de mes */}
+        {xTicks.map((p, i) => {
+          const idx = points.indexOf(p);
+          return (
+            <text
+              key={`xt${i}`}
+              x={xScale(idx)}
+              y={H - 8}
+              textAnchor="middle"
+              style={{ fill: fgDim, fontSize: 10, fontFamily: "var(--font-mono)" }}
+            >
+              {monthLabelShort(p.month)}
+            </text>
+          );
+        })}
+
+        {/* Puntos de interacción (invisible, para tooltip via hover) */}
+        {points.map((p, i) => (
+          <circle
+            key={i}
+            cx={xScale(i)}
+            cy={yScale(p.saldo)}
+            r={12}
+            fill="transparent"
+            className="balance-minimalist-dot"
+          />
+        ))}
+      </svg>
+    </Fill>
+  );
+}
+
 /* --------------------------------------------------- Barras: efectivo cajero */
 
 export function NivoCash({ rows, palette }: { rows: CashPoint[]; palette?: string[] | null }) {
   const theme = useNivoTheme();
-  const cash = palette && palette.length ? palette[0] : CASH;
+  const minimal = isMinimalistTheme();
+  const dark = isDarkTheme();
+  const cash = minimal
+    ? (dark ? "#a09e98" : "#6a6862")
+    : (palette && palette.length ? palette[0] : CASH);
   const data = rows.map((r) => ({
     month: monthLabelShort(r.month),
     total: +r.total.toFixed(2),
@@ -581,16 +771,20 @@ export function NivoCash({ rows, palette }: { rows: CashPoint[]; palette?: strin
         keys={["total"]}
         indexBy="month"
         margin={{ top: 16, right: 16, bottom: 28, left: 52 }}
-        padding={0.35}
-        borderRadius={4}
+        padding={minimal ? 0.5 : 0.35}
+        borderRadius={minimal ? 2 : 4}
         colors={[cash]}
-        defs={[
-          linearGradientDef("gCash", [
-            { offset: 0, color: cash },
-            { offset: 100, color: cash, opacity: 0.45 },
-          ]),
-        ]}
-        fill={[{ match: "*", id: "gCash" }]}
+        defs={
+          minimal
+            ? []
+            : [
+                linearGradientDef("gCash", [
+                  { offset: 0, color: cash },
+                  { offset: 100, color: cash, opacity: 0.45 },
+                ]),
+              ]
+        }
+        fill={minimal ? [] : [{ match: "*", id: "gCash" }]}
         enableLabel={false}
         enableGridX={false}
         axisBottom={{ tickSize: 0, tickPadding: 8 }}

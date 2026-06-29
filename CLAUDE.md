@@ -15,7 +15,8 @@ bancarios reales (usar datos sintéticos). Objetivo: binario nativo Mac (M4) + W
 
 Tauri v2 (Rust) · React 18 + TypeScript + Vite · SQLite (`@tauri-apps/plugin-sql`)
 · pdf.js (parseo) · Nivo (gráficos: @nivo/pie, @nivo/bar, @nivo/line) ·
-react-grid-layout (widgets reordenables/redimensionables) · Tailwind v4 + shadcn/ui (UI).
+react-grid-layout (widgets reordenables/redimensionables) · Tailwind v4 + shadcn/ui (UI)
+· @phosphor-icons/react (iconos minimalistas) · Geist (fuente editorial).
 
 ## Docs de referencia (leer según la tarea)
 

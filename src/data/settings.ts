@@ -36,10 +36,12 @@ export async function setBudgetRollover(v: boolean): Promise<void> {
   await setSetting("budget_rollover", v ? "1" : "0");
 }
 
-export type Theme = "dark" | "light";
+export type Theme = "dark" | "light" | "minimalist" | "minimalist-dark";
 
 export async function getTheme(): Promise<Theme> {
-  return (await getSetting("theme")) === "light" ? "light" : "dark";
+  const v = await getSetting("theme");
+  if (v === "light" || v === "minimalist" || v === "minimalist-dark") return v;
+  return "dark";
 }
 
 export async function setThemeSetting(v: Theme): Promise<void> {

@@ -2,7 +2,7 @@
 // guardado de cada categoría (comportamiento por defecto); las demás son
 // secuencias fijas que se aplican por índice.
 
-export type PaletteId = "categoria" | "joya" | "neon" | "pastel" | "curado";
+export type PaletteId = "categoria" | "joya" | "neon" | "pastel" | "curado" | "minimalista" | "minimalista-oscuro";
 
 export interface PaletteDef {
   id: PaletteId;
@@ -32,6 +32,16 @@ export const PALETTES: PaletteDef[] = [
     id: "curado",
     label: "Curado",
     colors: ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#edc948", "#b07aa1", "#ff9da7", "#9c755f", "#bab0ac"],
+  },
+  {
+    id: "minimalista",
+    label: "Minimalista",
+    colors: ["#9F2F2D", "#1F6C9F", "#346538", "#956400", "#787774", "#C4B5A0", "#8B7E6A", "#A39E93", "#6B5E50", "#B8AFA4"],
+  },
+  {
+    id: "minimalista-oscuro",
+    label: "Minimalista oscuro",
+    colors: ["#c4625f", "#6ba3c8", "#7db87f", "#d4a843", "#9e9c96", "#5a5856", "#8a877f", "#b0ada6", "#7d7568", "#c8c4bb"],
   },
 ];
 

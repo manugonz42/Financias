@@ -66,6 +66,50 @@
   --ring: #5e6ad2;
 }
 
+/* Minimalista — warm monochrome, editorial, sin acentos de color */
+[data-theme="minimalist"] {
+  --background: #F7F6F3;
+  --foreground: #111111;
+  --card: #FFFFFF;
+  --card-foreground: #111111;
+  --popover: #FFFFFF;
+  --popover-foreground: #111111;
+  --primary: #111111;
+  --primary-foreground: #FFFFFF;
+  --secondary: #EAEAEA;
+  --secondary-foreground: #111111;
+  --muted: #EAEAEA;
+  --muted-foreground: #787774;
+  --accent: #EAEAEA;
+  --accent-foreground: #111111;
+  --destructive: #9F2F2D;
+  --border: #EAEAEA;
+  --input: rgba(0, 0, 0, 0.06);
+  --ring: #111111;
+}
+
+/* Minimalista oscuro — warm monochrome sobre fondo oscuro */
+[data-theme="minimalist-dark"] {
+  --background: #1a1917;
+  --foreground: #f0efec;
+  --card: #232220;
+  --card-foreground: #f0efec;
+  --popover: #2a2927;
+  --popover-foreground: #f0efec;
+  --primary: #f0efec;
+  --primary-foreground: #1a1917;
+  --secondary: #2a2927;
+  --secondary-foreground: #f0efec;
+  --muted: #2a2927;
+  --muted-foreground: #9e9c96;
+  --accent: #3a3835;
+  --accent-foreground: #f0efec;
+  --destructive: #c4625f;
+  --border: rgba(255, 255, 255, 0.07);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #f0efec;
+}
+
 /* Expone los tokens como utilidades de Tailwind (bg-background, text-foreground…). */
 @theme inline {
   --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
@@ -92,4 +136,11 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Minimalista: usar Geist Sans/Mono en vez de Inter */
+[data-theme="minimalist"],
+[data-theme="minimalist-dark"] {
+  --font-sans: "Geist", "SF Pro Display", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "SF Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }

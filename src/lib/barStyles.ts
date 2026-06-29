@@ -32,6 +32,12 @@ export const BAR_STYLES: BarStyle[] = [
   { id: "neon-pinkviolet", label: "Neón rosa·violeta", fill: "neon", past: "#ff3d9a", now: "#8b5cff" },
   { id: "neon-orangepink", label: "Neón naranja·rosa", fill: "neon", past: "#ff7a00", now: "#ff2d95" },
   { id: "neon-bluecyan", label: "Neón azul·cian", fill: "neon", past: "#2f6bff", now: "#00eaff" },
+  // Minimalista: planos, colores cálidos neutros, sin gradientes ni neón.
+  { id: "minimalist-warm", label: "Minimalista cálido", fill: "flat", past: "#C4B5A0", now: "#111111" },
+  { id: "minimalist-pastel", label: "Minimalista pastel", fill: "flat", past: "#E1F3FE", now: "#1F6C9F" },
+  // Minimalista oscuro: planos, colores cálidos sobre fondo oscuro.
+  { id: "minimalist-dark-warm", label: "Minimalista oscuro cálido", fill: "flat", past: "#5a5856", now: "#f0efec" },
+  { id: "minimalist-dark-pastel", label: "Minimalista oscuro pastel", fill: "flat", past: "#4a7a9e", now: "#a8d4f0" },
 ];
 
 export const DEFAULT_BAR_STYLE = "default";

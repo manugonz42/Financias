@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FC } from "react";
 import { createPortal } from "react-dom";
-import { NivoDonut, NivoFlows, NivoBalance, NivoCash, NivoCalendar, NivoSunburst, NivoBudgets, NivoGoals, NivoCategoryCompare } from "../components/charts/nivo";
+import { NivoDonut, NivoFlows, NivoBalance, NivoBalanceMinimalist, NivoCash, NivoCalendar, NivoSunburst, NivoBudgets, NivoGoals, NivoCategoryCompare } from "../components/charts/nivo";
 import { Button } from "@/components/ui/button";
 import { DateRangeMenu } from "../components/DateRangeMenu";
 import { PaletteMenu } from "../components/PaletteMenu";
@@ -271,17 +271,23 @@ const NetWorthBody: FC<WidgetProps> = (p) => {
 
 const MonthlyBarsBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<MonthlyFlow[]>([]);
+  const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const { id, style, setStyle } = useBarStyle(p.widgetKey);
+  const from = range?.from ?? p.from;
+  const to = range?.to ?? p.to;
   useEffect(() => {
-    void monthlyFlows(scope(p)).then(setData);
-  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+    void monthlyFlows({ ...scope(p), from, to }).then(setData);
+  }, [p.accountId, from, to, p.excludeInternal, p.version]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
   return (
     <>
       <NivoFlows rows={data} style={style} />
       {p.headerSlot &&
         createPortal(
-          <BarStyleMenu value={id} onChange={setStyle} intrinsic={{ past: "var(--bad)", now: "var(--good)" }} />,
+          <>
+            <BarStyleMenu value={id} onChange={setStyle} intrinsic={{ past: "var(--bad)", now: "var(--good)" }} />
+            <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => setRange({ from: f, to: t })} />
+          </>,
           p.headerSlot,
         )}
     </>
@@ -292,6 +298,7 @@ const BalanceLineBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<BalancePoint[]>([]);
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const { colors, override, setOverride } = useChartPalette(p.widgetKey);
+  const { isMinimalist } = useApp();
   useEffect(() => {
     if (p.accountId === "all") void netWorthSeries().then(setData);
     else void accountBalanceSeries(p.accountId).then(setData);
@@ -305,7 +312,11 @@ const BalanceLineBody: FC<WidgetProps> = (p) => {
   const name = p.accountId === "all" ? "Patrimonio neto" : "Saldo";
   return (
     <>
-      <NivoBalance points={points} name={name} palette={colors} />
+      {isMinimalist ? (
+        <NivoBalanceMinimalist points={points} name={name} palette={colors} />
+      ) : (
+        <NivoBalance points={points} name={name} palette={colors} />
+      )}
       {p.headerSlot &&
         createPortal(
           <>

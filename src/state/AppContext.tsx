@@ -25,6 +25,10 @@ interface AppState {
   setExcludeInternal: (v: boolean) => void;
   theme: Theme;
   setTheme: (t: Theme) => void;
+  /** True si el tema activo es una variante minimalista. */
+  isMinimalist: boolean;
+  /** True si el tema es oscuro (dark o minimalist-dark). */
+  isDark: boolean;
   /** Paleta de gráficos global. Cada widget puede sobreescribirla. */
   palette: PaletteId;
   setPalette: (p: PaletteId) => void;
@@ -103,6 +107,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setVersion((v) => v + 1); // re-render de widgets/gráficos con el tema nuevo
   }, []);
 
+  const isMinimalist = theme === "minimalist" || theme === "minimalist-dark";
+  const isDark = theme === "dark" || theme === "minimalist-dark";
+
   const setPalette = useCallback((p: PaletteId) => {
     setPaletteState(p);
     void setChartPalette(p);
@@ -127,6 +134,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setExcludeInternal,
         theme,
         setTheme,
+        isMinimalist,
+        isDark,
         palette,
         setPalette,
         iconStyle,

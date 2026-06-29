@@ -36,6 +36,46 @@
   color-scheme: light;
 }
 
+/* Minimalista: warm monochrome, editorial, sin acentos de color. */
+:root[data-theme="minimalist"] {
+  --bg: #F7F6F3;
+  --bg-soft: #F7F6F3;
+  --bg-card: #FFFFFF;
+  --bg-elev: #EAEAEA;
+  --border: #EAEAEA;
+  --text: #111111;
+  --text-dim: #787774;
+  --accent: #111111;
+  --accent-soft: #333333;
+  --good: #346538;
+  --bad: #9F2F2D;
+  --warn: #956400;
+  color-scheme: light;
+  --font-sans: "Geist", "SF Pro Display", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "SF Mono", ui-monospace, Menlo, monospace;
+  font-family: var(--font-sans);
+}
+
+/* Minimalista oscuro: warm monochrome sobre fondo oscuro. */
+:root[data-theme="minimalist-dark"] {
+  --bg: #1a1917;
+  --bg-soft: #232220;
+  --bg-card: #232220;
+  --bg-elev: #2a2927;
+  --border: rgba(255, 255, 255, 0.07);
+  --text: #f0efec;
+  --text-dim: #9e9c96;
+  --accent: #f0efec;
+  --accent-soft: #c8c6c0;
+  --good: #7db87f;
+  --bad: #c4625f;
+  --warn: #d4a843;
+  color-scheme: dark;
+  --font-sans: "Geist", "SF Pro Display", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "SF Mono", ui-monospace, Menlo, monospace;
+  font-family: var(--font-sans);
+}
+
 * { box-sizing: border-box; }
 
 /* Transición suave al cambiar de tema */
@@ -316,3 +356,17 @@ tr.date-group:hover td { background: var(--bg-soft); }
   border-color: var(--accent);
 }
 .widget-hide { font-size: 12px; color: var(--text-dim); cursor: pointer; background: none; border: none; padding: 2px 6px; }
+
+/* Minimalista: suprimir sombras en tarjetas y widgets */
+:root[data-theme="minimalist"] .card,
+:root[data-theme="minimalist"] .kpi,
+:root[data-theme="minimalist"] .toast,
+:root[data-theme="minimalist"] .update-banner,
+:root[data-theme="minimalist"] .modal,
+:root[data-theme="minimalist-dark"] .card,
+:root[data-theme="minimalist-dark"] .kpi,
+:root[data-theme="minimalist-dark"] .toast,
+:root[data-theme="minimalist-dark"] .update-banner,
+:root[data-theme="minimalist-dark"] .modal {
+  box-shadow: none;
+}

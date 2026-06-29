@@ -2,6 +2,7 @@ import ReactDOM from "react-dom/client";
 import { HashRouter } from "react-router-dom";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/geist";
 import App from "./App";
 import { AppProvider } from "./state/AppContext";
 import "./index.css";
