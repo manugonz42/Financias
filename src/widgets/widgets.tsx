@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FC } from "react";
 import { createPortal } from "react-dom";
 import { NivoDonut, NivoFlows, NivoBalance, NivoBalanceMinimalist, NivoCash, NivoCalendar, NivoSunburst, NivoBudgets, NivoGoals, NivoCategoryCompare } from "../components/charts/nivo";
+import { NivoCashFlowBars, NivoCategoryLollipop, NivoInsightLine, NivoSavingsGauge, NivoMonthMultiples } from "../components/charts/nivo-alts";
 import { Button } from "@/components/ui/button";
 import { DateRangeMenu } from "../components/DateRangeMenu";
 import { PaletteMenu } from "../components/PaletteMenu";
@@ -8,7 +9,7 @@ import { BarStyleMenu } from "../components/BarStyleMenu";
 import { useChartPalette } from "../components/charts/useChartPalette";
 import { useBarStyle } from "../components/charts/useBarStyle";
 import { formatEUR, monthKey } from "../lib/format";
-import { kpis, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions, dailySpend, debugIncomeBreakdown, type IncomeDebugRow } from "../data/stats";
+import { kpis, spendByCategory, spendByCategoryId, monthlyFlows, accountBalanceSeries, netWorthSeries, netWorthNow, cashByMonth, detectSubscriptions, dailySpend, debugIncomeBreakdown, type IncomeDebugRow } from "../data/stats";
 import { listBudgets, type BudgetRow } from "../data/budgets";
 import { listGoals } from "../data/goals";
 import { listScheduled, type ScheduledRow } from "../data/scheduled";
@@ -957,6 +958,87 @@ const GoalProjectionBody: FC<WidgetProps> = (p) => {
   );
 };
 
+/* ---- Alt: Barras horizontales de flujo de caja ---- */
+const CashFlowBarsAltBody: FC<WidgetProps> = (p) => {
+  const [data, setData] = useState<MonthlyFlow[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void monthlyFlows(scope(p)).then((d) => { if (!cancelled) setData(d); });
+    return () => { cancelled = true; };
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  if (data.length === 0) return <span className="muted">Sin datos.</span>;
+  return <NivoCashFlowBars data={data} />;
+};
+
+/* ---- Alt: Lollipop de categorías ---- */
+const CategoryLollipopAltBody: FC<WidgetProps> = (p) => {
+  const [items, setItems] = useState<{ name: string; value: number; color: string }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void spendByCategory(scope(p)).then((d) => {
+      if (!cancelled) setItems(d.map((s) => ({ name: s.name, value: s.value, color: s.color })));
+    });
+    return () => { cancelled = true; };
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  if (items.length === 0) return <span className="muted">Sin gastos.</span>;
+  return <NivoCategoryLollipop items={items} />;
+};
+
+/* ---- Alt: Línea con anotaciones de insight ---- */
+const InsightLineAltBody: FC<WidgetProps> = (p) => {
+  const [data, setData] = useState<{ month: string; value: number }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void monthlyFlows(scope(p)).then((d) => {
+      if (!cancelled) setData(d.map((m) => ({ month: m.month, value: m.expense })));
+    });
+    return () => { cancelled = true; };
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  if (data.length === 0) return <span className="muted">Sin datos.</span>;
+  return <NivoInsightLine data={data} />;
+};
+
+/* ---- Alt: Gauge de tasa de ahorro ---- */
+const SavingsGaugeAltBody: FC<WidgetProps> = (p) => {
+  const [rate, setRate] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    void kpis(scope(p)).then((k) => {
+      if (!cancelled) setRate(k.savingsRate);
+    });
+    return () => { cancelled = true; };
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  return <NivoSavingsGauge rate={rate} />;
+};
+
+/* ---- Alt: Small multiples de meses ---- */
+const MonthMultiplesAltBody: FC<WidgetProps> = (p) => {
+  const { categories } = useApp();
+  const [months, setMonths] = useState<{ label: string; categories: { name: string; value: number; color: string }[] }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const flows = await monthlyFlows(scope(p));
+      const result: { label: string; categories: { name: string; value: number; color: string }[] }[] = [];
+      for (const f of flows.slice(-4)) {
+        const cats = await spendByCategoryId({ ...scope(p), month: f.month });
+        const catMap = new Map(categories.map((c) => [c.id, c]));
+        result.push({
+          label: f.month,
+          categories: cats
+            .map((c) => ({ name: catMap.get(c.id)?.name ?? "?", value: c.value, color: catMap.get(c.id)?.color ?? "#888" }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5),
+        });
+      }
+      if (!cancelled) setMonths(result);
+    })();
+    return () => { cancelled = true; };
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version, categories]);
+  if (months.length === 0) return <span className="muted">Sin datos.</span>;
+  return <NivoMonthMultiples months={months} />;
+};
+
 /* ---- Debug: desglose de ingresos por categoría ---- */
 const IncomeDebugBody: FC<WidgetProps> = (p) => {
   const [rows, setRows] = useState<IncomeDebugRow[]>([]);
@@ -1036,5 +1118,11 @@ export const WIDGETS: WidgetDef[] = [
   { key: "subs", title: "Pagos recurrentes", w: 6, h: 7, Body: SubscriptionsBody },
   { key: "calendar", title: "Gasto diario (calendario)", w: 8, h: 6, Body: CalendarBody },
   { key: "sunburst", title: "Categorías (sunburst)", w: 6, h: 10, Body: SunburstBody },
+  // Alternativas de diseño (data-visualization skill)
+  { key: "alt_cashflow_bars", title: "Flujo de caja (barras)", w: 8, h: 6, Body: CashFlowBarsAltBody },
+  { key: "alt_lollipop", title: "Categorías (lollipop)", w: 6, h: 7, Body: CategoryLollipopAltBody },
+  { key: "alt_insight_line", title: "Gasto con tendencia", w: 8, h: 6, Body: InsightLineAltBody },
+  { key: "alt_gauge", title: "Tasa de ahorro (gauge)", w: 4, h: 4, Body: SavingsGaugeAltBody },
+  { key: "alt_multiples", title: "Comparativa mensual (multiples)", w: 8, h: 7, Body: MonthMultiplesAltBody },
   { key: "debug_income", title: "DEBUG: Ingresos por categoría", w: 8, h: 8, Body: IncomeDebugBody },
 ];
