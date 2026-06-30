@@ -961,67 +961,143 @@ const GoalProjectionBody: FC<WidgetProps> = (p) => {
 /* ---- Alt: Barras horizontales de flujo de caja ---- */
 const CashFlowBarsAltBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<MonthlyFlow[]>([]);
+  const [from, setFrom] = useState(p.from);
+  const [to, setTo] = useState(p.to);
   useEffect(() => {
     let cancelled = false;
-    void monthlyFlows(scope(p)).then((d) => { if (!cancelled) setData(d); });
+    void monthlyFlows({ ...scope(p), from, to }).then((d) => { if (!cancelled) setData(d); });
     return () => { cancelled = true; };
-  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  }, [p.accountId, from, to, p.excludeInternal, p.version]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
-  return <NivoCashFlowBars data={data} />;
+  return (
+    <>
+      <NivoCashFlowBars data={data} />
+      {p.headerSlot && createPortal(
+        <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => { setFrom(f); setTo(t); }} />,
+        p.headerSlot,
+      )}
+    </>
+  );
 };
 
 /* ---- Alt: Lollipop de categorías ---- */
 const CategoryLollipopAltBody: FC<WidgetProps> = (p) => {
+  const { categories } = useApp();
   const [items, setItems] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [selectedCat, setSelectedCat] = useState<number | "">("");
+  const [from, setFrom] = useState(p.from);
+  const [to, setTo] = useState(p.to);
   useEffect(() => {
     let cancelled = false;
-    void spendByCategory(scope(p)).then((d) => {
+    const filters = { ...scope(p), from, to, ...(selectedCat !== "" ? { categoryId: selectedCat } : {}) };
+    void spendByCategory(filters).then((d) => {
       if (!cancelled) setItems(d.map((s) => ({ name: s.name, value: s.value, color: s.color })));
     });
     return () => { cancelled = true; };
-  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  }, [p.accountId, from, to, p.excludeInternal, p.version, selectedCat]);
   if (items.length === 0) return <span className="muted">Sin gastos.</span>;
-  return <NivoCategoryLollipop items={items} />;
+  return (
+    <>
+      <NivoCategoryLollipop items={items} />
+      {p.headerSlot && createPortal(
+        <>
+          <select
+            value={selectedCat}
+            onChange={(e) => setSelectedCat(e.target.value ? Number(e.target.value) : "")}
+            title="Categoría"
+            style={{ height: 28, fontSize: 11, borderRadius: 4, border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text)", padding: "0 6px" }}
+          >
+            <option value="">Todas</option>
+            {categories.filter((c) => c.kind === "gasto").map((c) => (
+              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            ))}
+          </select>
+          <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => { setFrom(f); setTo(t); }} />
+        </>,
+        p.headerSlot,
+      )}
+    </>
+  );
 };
 
 /* ---- Alt: Línea con anotaciones de insight ---- */
 const InsightLineAltBody: FC<WidgetProps> = (p) => {
+  const { categories } = useApp();
   const [data, setData] = useState<{ month: string; value: number }[]>([]);
+  const [selectedCat, setSelectedCat] = useState<number | "">("");
+  const [from, setFrom] = useState(p.from);
+  const [to, setTo] = useState(p.to);
   useEffect(() => {
     let cancelled = false;
-    void monthlyFlows(scope(p)).then((d) => {
+    const filters = { ...scope(p), from, to, ...(selectedCat !== "" ? { categoryId: selectedCat } : {}) };
+    void monthlyFlows(filters).then((d) => {
       if (!cancelled) setData(d.map((m) => ({ month: m.month, value: m.expense })));
     });
     return () => { cancelled = true; };
-  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  }, [p.accountId, from, to, p.excludeInternal, p.version, selectedCat]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
-  return <NivoInsightLine data={data} />;
+  return (
+    <>
+      <NivoInsightLine data={data} />
+      {p.headerSlot && createPortal(
+        <>
+          <select
+            value={selectedCat}
+            onChange={(e) => setSelectedCat(e.target.value ? Number(e.target.value) : "")}
+            title="Categoría"
+            style={{ height: 28, fontSize: 11, borderRadius: 4, border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text)", padding: "0 6px" }}
+          >
+            <option value="">Todas</option>
+            {categories.filter((c) => c.kind === "gasto").map((c) => (
+              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            ))}
+          </select>
+          <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => { setFrom(f); setTo(t); }} />
+        </>,
+        p.headerSlot,
+      )}
+    </>
+  );
 };
 
 /* ---- Alt: Gauge de tasa de ahorro ---- */
 const SavingsGaugeAltBody: FC<WidgetProps> = (p) => {
   const [rate, setRate] = useState(0);
+  const [from, setFrom] = useState(p.from);
+  const [to, setTo] = useState(p.to);
   useEffect(() => {
     let cancelled = false;
-    void kpis(scope(p)).then((k) => {
+    void kpis({ ...scope(p), from, to }).then((k) => {
       if (!cancelled) setRate(k.savingsRate);
     });
     return () => { cancelled = true; };
-  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
-  return <NivoSavingsGauge rate={rate} />;
+  }, [p.accountId, from, to, p.excludeInternal, p.version]);
+  return (
+    <>
+      <NivoSavingsGauge rate={rate} />
+      {p.headerSlot && createPortal(
+        <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => { setFrom(f); setTo(t); }} />,
+        p.headerSlot,
+      )}
+    </>
+  );
 };
 
 /* ---- Alt: Small multiples de meses ---- */
 const MonthMultiplesAltBody: FC<WidgetProps> = (p) => {
   const { categories } = useApp();
   const [months, setMonths] = useState<{ label: string; categories: { name: string; value: number; color: string }[] }[]>([]);
+  const [selectedCat, setSelectedCat] = useState<number | "">("");
+  const [from, setFrom] = useState(p.from);
+  const [to, setTo] = useState(p.to);
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const flows = await monthlyFlows(scope(p));
+      const filters = { ...scope(p), from, to, ...(selectedCat !== "" ? { categoryId: selectedCat } : {}) };
+      const flows = await monthlyFlows(filters);
       const result: { label: string; categories: { name: string; value: number; color: string }[] }[] = [];
       for (const f of flows.slice(-4)) {
-        const cats = await spendByCategoryId({ ...scope(p), month: f.month });
+        const cats = await spendByCategoryId({ ...filters, month: f.month });
         const catMap = new Map(categories.map((c) => [c.id, c]));
         result.push({
           label: f.month,
@@ -1034,9 +1110,45 @@ const MonthMultiplesAltBody: FC<WidgetProps> = (p) => {
       if (!cancelled) setMonths(result);
     })();
     return () => { cancelled = true; };
-  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version, categories]);
+  }, [p.accountId, from, to, p.excludeInternal, p.version, selectedCat, categories]);
   if (months.length === 0) return <span className="muted">Sin datos.</span>;
-  return <NivoMonthMultiples months={months} />;
+
+  // Recoger todas las categorías únicas para la leyenda
+  const allCatNames = [...new Set(months.flatMap((m) => m.categories.map((c) => c.name)))];
+  const catColorMap = new Map<string, string>();
+  for (const m of months) for (const c of m.categories) if (!catColorMap.has(c.name)) catColorMap.set(c.name, c.color);
+
+  return (
+    <>
+      <NivoMonthMultiples months={months} />
+      {/* Leyenda de colores */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8, fontSize: 10, color: "var(--text-dim)" }}>
+        {allCatNames.map((name) => (
+          <div key={name} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: catColorMap.get(name) ?? "#888" }} />
+            <span>{name}</span>
+          </div>
+        ))}
+      </div>
+      {p.headerSlot && createPortal(
+        <>
+          <select
+            value={selectedCat}
+            onChange={(e) => setSelectedCat(e.target.value ? Number(e.target.value) : "")}
+            title="Categoría"
+            style={{ height: 28, fontSize: 11, borderRadius: 4, border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text)", padding: "0 6px" }}
+          >
+            <option value="">Todas</option>
+            {categories.filter((c) => c.kind === "gasto").map((c) => (
+              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            ))}
+          </select>
+          <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => { setFrom(f); setTo(t); }} />
+        </>,
+        p.headerSlot,
+      )}
+    </>
+  );
 };
 
 /* ---- Debug: desglose de ingresos por categoría ---- */
