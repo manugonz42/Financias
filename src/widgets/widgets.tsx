@@ -4,6 +4,7 @@ import { NivoDonut, NivoFlows, NivoBalance, NivoBalanceMinimalist, NivoCash, Niv
 import { NivoCashFlowBars, NivoCategoryLollipop, NivoInsightLine, NivoSavingsGauge, NivoMonthMultiples } from "../components/charts/nivo-alts";
 import { Button } from "@/components/ui/button";
 import { DateRangeMenu } from "../components/DateRangeMenu";
+import { CategoryFilter } from "../components/CategoryFilter";
 import { PaletteMenu } from "../components/PaletteMenu";
 import { BarStyleMenu } from "../components/BarStyleMenu";
 import { useChartPalette } from "../components/charts/useChartPalette";
@@ -982,36 +983,27 @@ const CashFlowBarsAltBody: FC<WidgetProps> = (p) => {
 
 /* ---- Alt: Lollipop de categorías ---- */
 const CategoryLollipopAltBody: FC<WidgetProps> = (p) => {
-  const { categories } = useApp();
   const [items, setItems] = useState<{ name: string; value: number; color: string }[]>([]);
-  const [selectedCat, setSelectedCat] = useState<number | "">("");
+  const [selectedCats, setSelectedCats] = useState<number[]>([]);
   const [from, setFrom] = useState(p.from);
   const [to, setTo] = useState(p.to);
   useEffect(() => {
     let cancelled = false;
-    const filters = { ...scope(p), from, to, ...(selectedCat !== "" ? { categoryId: selectedCat } : {}) };
+    const filters: TxFilters = { ...scope(p), from, to };
+    if (selectedCats.length === 1) filters.categoryId = selectedCats[0];
+    else if (selectedCats.length > 1) filters.excludeCategoryIds = [];
     void spendByCategory(filters).then((d) => {
       if (!cancelled) setItems(d.map((s) => ({ name: s.name, value: s.value, color: s.color })));
     });
     return () => { cancelled = true; };
-  }, [p.accountId, from, to, p.excludeInternal, p.version, selectedCat]);
+  }, [p.accountId, from, to, p.excludeInternal, p.version, selectedCats]);
   if (items.length === 0) return <span className="muted">Sin gastos.</span>;
   return (
     <>
       <NivoCategoryLollipop items={items} />
       {p.headerSlot && createPortal(
         <>
-          <select
-            value={selectedCat}
-            onChange={(e) => setSelectedCat(e.target.value ? Number(e.target.value) : "")}
-            title="Categoría"
-            style={{ height: 28, fontSize: 11, borderRadius: 4, border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text)", padding: "0 6px" }}
-          >
-            <option value="">Todas</option>
-            {categories.filter((c) => c.kind === "gasto").map((c) => (
-              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-            ))}
-          </select>
+          <CategoryFilter selectedIds={selectedCats} onChange={setSelectedCats} />
           <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => { setFrom(f); setTo(t); }} />
         </>,
         p.headerSlot,
@@ -1022,36 +1014,27 @@ const CategoryLollipopAltBody: FC<WidgetProps> = (p) => {
 
 /* ---- Alt: Línea con anotaciones de insight ---- */
 const InsightLineAltBody: FC<WidgetProps> = (p) => {
-  const { categories } = useApp();
   const [data, setData] = useState<{ month: string; value: number }[]>([]);
-  const [selectedCat, setSelectedCat] = useState<number | "">("");
+  const [selectedCats, setSelectedCats] = useState<number[]>([]);
   const [from, setFrom] = useState(p.from);
   const [to, setTo] = useState(p.to);
   useEffect(() => {
     let cancelled = false;
-    const filters = { ...scope(p), from, to, ...(selectedCat !== "" ? { categoryId: selectedCat } : {}) };
+    const filters: TxFilters = { ...scope(p), from, to };
+    if (selectedCats.length === 1) filters.categoryId = selectedCats[0];
+    else if (selectedCats.length > 1) filters.excludeCategoryIds = [];
     void monthlyFlows(filters).then((d) => {
       if (!cancelled) setData(d.map((m) => ({ month: m.month, value: m.expense })));
     });
     return () => { cancelled = true; };
-  }, [p.accountId, from, to, p.excludeInternal, p.version, selectedCat]);
+  }, [p.accountId, from, to, p.excludeInternal, p.version, selectedCats]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
   return (
     <>
       <NivoInsightLine data={data} />
       {p.headerSlot && createPortal(
         <>
-          <select
-            value={selectedCat}
-            onChange={(e) => setSelectedCat(e.target.value ? Number(e.target.value) : "")}
-            title="Categoría"
-            style={{ height: 28, fontSize: 11, borderRadius: 4, border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text)", padding: "0 6px" }}
-          >
-            <option value="">Todas</option>
-            {categories.filter((c) => c.kind === "gasto").map((c) => (
-              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-            ))}
-          </select>
+          <CategoryFilter selectedIds={selectedCats} onChange={setSelectedCats} />
           <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => { setFrom(f); setTo(t); }} />
         </>,
         p.headerSlot,
@@ -1087,13 +1070,15 @@ const SavingsGaugeAltBody: FC<WidgetProps> = (p) => {
 const MonthMultiplesAltBody: FC<WidgetProps> = (p) => {
   const { categories } = useApp();
   const [months, setMonths] = useState<{ label: string; categories: { name: string; value: number; color: string }[] }[]>([]);
-  const [selectedCat, setSelectedCat] = useState<number | "">("");
+  const [selectedCats, setSelectedCats] = useState<number[]>([]);
   const [from, setFrom] = useState(p.from);
   const [to, setTo] = useState(p.to);
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const filters = { ...scope(p), from, to, ...(selectedCat !== "" ? { categoryId: selectedCat } : {}) };
+      const filters: TxFilters = { ...scope(p), from, to };
+      if (selectedCats.length === 1) filters.categoryId = selectedCats[0];
+      else if (selectedCats.length > 1) filters.excludeCategoryIds = [];
       const flows = await monthlyFlows(filters);
       const result: { label: string; categories: { name: string; value: number; color: string }[] }[] = [];
       for (const f of flows.slice(-4)) {
@@ -1110,7 +1095,7 @@ const MonthMultiplesAltBody: FC<WidgetProps> = (p) => {
       if (!cancelled) setMonths(result);
     })();
     return () => { cancelled = true; };
-  }, [p.accountId, from, to, p.excludeInternal, p.version, selectedCat, categories]);
+  }, [p.accountId, from, to, p.excludeInternal, p.version, selectedCats, categories]);
   if (months.length === 0) return <span className="muted">Sin datos.</span>;
 
   // Recoger todas las categorías únicas para la leyenda
@@ -1132,17 +1117,7 @@ const MonthMultiplesAltBody: FC<WidgetProps> = (p) => {
       </div>
       {p.headerSlot && createPortal(
         <>
-          <select
-            value={selectedCat}
-            onChange={(e) => setSelectedCat(e.target.value ? Number(e.target.value) : "")}
-            title="Categoría"
-            style={{ height: 28, fontSize: 11, borderRadius: 4, border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text)", padding: "0 6px" }}
-          >
-            <option value="">Todas</option>
-            {categories.filter((c) => c.kind === "gasto").map((c) => (
-              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-            ))}
-          </select>
+          <CategoryFilter selectedIds={selectedCats} onChange={setSelectedCats} />
           <DateRangeMenu from={from} to={to} anchor={p.to} onChange={(f, t) => { setFrom(f); setTo(t); }} />
         </>,
         p.headerSlot,
