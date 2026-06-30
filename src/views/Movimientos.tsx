@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../state/AppContext";
 import { CategoryGlyph } from "../lib/icons";
 import { AccountSelector, MonthSelect, ExcludeInternalToggle } from "../components/Controls";
@@ -23,7 +23,7 @@ const SUBTYPE_LABEL: Record<string, string> = {
 };
 
 export function Movimientos() {
-  const { accountId, excludeInternal, categories, version, reload, toast, iconStyle } = useApp();
+  const { accountId, excludeInternal, categories, version, reload, toast, toastWithAction, iconStyle } = useApp();
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const [editingCat, setEditingCat] = useState<number | null>(null);
   const [months, setMonths] = useState<string[]>([]);
@@ -32,6 +32,7 @@ export function Movimientos() {
   const [categoryId, setCategoryId] = useState<number | "">("");
   const [subtype, setSubtype] = useState("");
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [flow, setFlow] = useState<"" | "expense" | "income">("");
   const [recon, setRecon] = useState<"" | "yes" | "no">("");
   const [sort, setSort] = useState<"fecha-desc" | "fecha-asc" | "imp-desc" | "imp-asc">("fecha-desc");
@@ -42,11 +43,18 @@ export function Movimientos() {
   const [note, setNote] = useState("");
   const [splitting, setSplitting] = useState<Transaction | null>(null);
   const [receipting, setReceipting] = useState<Transaction | null>(null);
+  const [confirmingReconcile, setConfirmingReconcile] = useState(false);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     void distinctMonths().then(setMonths);
     void distinctSubtypes().then(setSubtypes);
   }, [version]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const filters: TxFilters = useMemo(
     () => ({
@@ -63,6 +71,7 @@ export function Movimientos() {
   );
 
   useEffect(() => {
+    setNote("");
     let cancelled = false;
     setLoading(true);
     (async () => {
@@ -78,16 +87,38 @@ export function Movimientos() {
   }, [filters, version]);
 
   async function changeCategory(txId: number, catId: number) {
+    const tx = rows.find((r) => r.id === txId);
+    const prevCatId = tx?.category_id ?? null;
     const n = await reassignCategoryByElement(txId, catId);
     setEditingCat(null);
     setNote(n > 1 ? `Actualizados ${n} movimientos con el mismo concepto.` : "");
-    toast(n > 1 ? `Categoría aplicada a ${n} movimientos` : "Categoría actualizada");
     reload();
+    if (n > 1 && prevCatId !== null && prevCatId !== catId) {
+      toastWithAction(
+        `Categoría aplicada a ${n} movimientos`,
+        "Deshacer",
+        () => { void reassignCategoryByElement(txId, prevCatId).then(() => reload()); },
+      );
+    } else {
+      toast("Categoría actualizada");
+    }
   }
 
   async function toggleReconciled(txId: number, value: boolean) {
     await setReconciled(txId, value);
     setRows((prev) => prev.map((r) => (r.id === txId ? { ...r, reconciled: value ? 1 : 0 } : r)));
+  }
+
+  function handleReconcileAll(value: boolean) {
+    if (!confirmingReconcile) {
+      setConfirmingReconcile(true);
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = setTimeout(() => setConfirmingReconcile(false), 5000);
+      return;
+    }
+    setConfirmingReconcile(false);
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    void reconcileAll(value);
   }
 
   async function reconcileAll(value: boolean) {
@@ -155,8 +186,8 @@ export function Movimientos() {
         <input
           className="grow"
           placeholder="Buscar concepto o comercio…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
         />
         <ExcludeInternalToggle />
       </div>
@@ -169,9 +200,12 @@ export function Movimientos() {
         {rows.length > 0 && (
           <button
             className="link-btn"
-            onClick={() => void reconcileAll(reconciledCount < rows.length)}
+            onClick={() => handleReconcileAll(reconciledCount < rows.length)}
+            style={confirmingReconcile ? { color: "var(--bad)", fontWeight: 600 } : undefined}
           >
-            {reconciledCount < rows.length ? "Conciliar todos" : "Desmarcar todos"}
+            {confirmingReconcile
+              ? `¿Seguro? ${reconciledCount < rows.length ? `Conciliar ${rows.length}` : "Desmarcar"} todos`
+              : reconciledCount < rows.length ? "Conciliar todos" : "Desmarcar todos"}
           </button>
         )}
         {note && <span className="spacer" />}

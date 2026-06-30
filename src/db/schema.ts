@@ -62,10 +62,12 @@ export const SCHEMA: string[] = [
      subtype TEXT,
      merchant TEXT,
      card_last4 TEXT,
-     is_internal INTEGER NOT NULL DEFAULT 0,
-     manual_category INTEGER NOT NULL DEFAULT 0, -- 1 = el usuario asignó la categoría manualmente
-     bank_subtype_label TEXT,            -- etiqueta del banco (BBVA: "Card payment"…) si la separamos del concepto
-     source_file TEXT,
+      is_internal INTEGER NOT NULL DEFAULT 0,
+      manual_category INTEGER NOT NULL DEFAULT 0, -- 1 = el usuario asignó la categoría manualmente
+      bank_subtype_label TEXT,            -- etiqueta del banco (BBVA: "Card payment"…) si la separamos del concepto
+      reconciled INTEGER NOT NULL DEFAULT 0, -- 1 = movimineto revisado/conciliado
+      receipt_path TEXT,                  -- ruta del archivo de recibo adjunto
+      source_file TEXT,
      import_batch_id INTEGER,
      dedupe_key TEXT NOT NULL UNIQUE,
      notes TEXT,
@@ -172,4 +174,17 @@ export const SCHEMA: string[] = [
      nuevos INTEGER NOT NULL DEFAULT 0,
      duplicados INTEGER NOT NULL DEFAULT 0
    )`,
+
+  // Vista de movimientos efectivos: sustituye la CTE EFFECTIVE_TX.
+  // Cada movimiento sin dividir aporta una fila; cada dividido aporta una por parte.
+  `CREATE VIEW IF NOT EXISTS effective_tx AS
+     SELECT account_id, fecha_operacion, fecha_valor, concepto, merchant, subtype,
+            importe, is_internal, reconciled, category_id, ABS(importe) AS amt
+       FROM transactions
+      WHERE id NOT IN (SELECT transaction_id FROM transaction_splits)
+     UNION ALL
+     SELECT t.account_id, t.fecha_operacion, t.fecha_valor, t.concepto, t.merchant, t.subtype,
+            t.importe, t.is_internal, t.reconciled, s.category_id, s.amount AS amt
+       FROM transactions t
+       JOIN transaction_splits s ON s.transaction_id = t.id`,
 ];

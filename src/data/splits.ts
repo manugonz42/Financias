@@ -1,4 +1,4 @@
-import { query, exec } from "../db/database";
+import { query, exec, getDB } from "../db/database";
 import type { TransactionSplit } from "../types";
 
 /**
@@ -10,18 +10,11 @@ import type { TransactionSplit } from "../types";
  * Columna `amt` = magnitud a sumar (ABS del importe, o el importe de la parte).
  * El resto de columnas se arrastran del movimiento padre para que los filtros
  * (cuenta, fecha, interno, signo, concepto) sigan funcionando con alias `t`.
+ *
+ * Nota: ahora es una VIEW en SQLite (`effective_tx`), pero se mantiene esta
+ * referencia como string para compatibilidad con las queries que usan `FROM ${EFFECTIVE_TX} t`.
  */
-export const EFFECTIVE_TX = `(
-  SELECT account_id, fecha_operacion, fecha_valor, concepto, merchant, subtype,
-         importe, is_internal, reconciled, category_id, ABS(importe) AS amt
-    FROM transactions
-   WHERE id NOT IN (SELECT transaction_id FROM transaction_splits)
-  UNION ALL
-  SELECT t.account_id, t.fecha_operacion, t.fecha_valor, t.concepto, t.merchant, t.subtype,
-         t.importe, t.is_internal, t.reconciled, s.category_id, s.amount AS amt
-    FROM transactions t
-    JOIN transaction_splits s ON s.transaction_id = t.id
-)`;
+export const EFFECTIVE_TX = "effective_tx";
 
 export async function listSplits(txId: number): Promise<TransactionSplit[]> {
   return query<TransactionSplit>(
@@ -35,12 +28,20 @@ export async function setSplits(
   txId: number,
   parts: { category_id: number; amount: number; note?: string | null }[],
 ): Promise<void> {
-  await exec("DELETE FROM transaction_splits WHERE transaction_id = ?", [txId]);
-  for (const p of parts) {
-    await exec(
-      "INSERT INTO transaction_splits (transaction_id, category_id, amount, note) VALUES (?, ?, ?, ?)",
-      [txId, p.category_id, Math.abs(p.amount), p.note ?? null],
-    );
+  const db = await getDB();
+  await db.execute("BEGIN");
+  try {
+    await db.execute("DELETE FROM transaction_splits WHERE transaction_id = ?", [txId]);
+    for (const p of parts) {
+      await db.execute(
+        "INSERT INTO transaction_splits (transaction_id, category_id, amount, note) VALUES (?, ?, ?, ?)",
+        [txId, p.category_id, Math.abs(p.amount), p.note ?? null],
+      );
+    }
+    await db.execute("COMMIT");
+  } catch (e) {
+    await db.execute("ROLLBACK");
+    throw e;
   }
 }
 

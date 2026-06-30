@@ -54,8 +54,11 @@ export async function updateManualAccount(
   );
 }
 
-/** Borra una cuenta manual y sus saldos. No afecta a las cuentas importadas. */
+/** Borra una cuenta manual, sus saldos y datos asociados. No afecta a las cuentas importadas. */
 export async function deleteManualAccount(id: number): Promise<void> {
+  await exec("DELETE FROM transaction_splits WHERE transaction_id IN (SELECT id FROM transactions WHERE account_id = ?)", [id]);
+  await exec("DELETE FROM receipt_items WHERE transaction_id IN (SELECT id FROM transactions WHERE account_id = ?)", [id]);
+  await exec("DELETE FROM transactions WHERE account_id = ?", [id]);
   await exec("DELETE FROM account_balances WHERE account_id = ?", [id]);
   await exec("DELETE FROM accounts WHERE id = ? AND manual = 1", [id]);
 }

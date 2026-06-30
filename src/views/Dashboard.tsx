@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState, type FC } from "react";
+import { useEffect, useMemo, useRef, useState, type FC } from "react";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import { Link } from "react-router-dom";
 import { RefreshCw, RotateCcw, GripVertical, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "../state/AppContext";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AccountSelector, DateRange, ExcludeInternalToggle } from "../components/Controls";
 import { WIDGETS, type WidgetProps, type WidgetDef } from "../widgets/widgets";
 import { dateBounds } from "../data/transactions";
@@ -47,6 +48,7 @@ export function Dashboard() {
   const [to, setTo] = useState("");
   const [items, setItems] = useState<WState[]>([]);
   const [ready, setReady] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,7 +110,12 @@ export function Dashboard() {
         return l ? { ...it, x: l.x, y: l.y, w: l.w, h: l.h } : it;
       }),
     );
-    next.forEach((l) => void saveLayoutItem(l.i, l.x, l.y, l.w, l.h, 1));
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      for (const l of next) {
+        void saveLayoutItem(l.i, l.x, l.y, l.w, l.h, 1);
+      }
+    }, 500);
   }
 
   function hide(key: string) {
@@ -236,7 +243,9 @@ function WidgetChrome({
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <Body {...chartProps} headerSlot={actionsEl} widgetKey={def.key} />
+        <ErrorBoundary title={def.title}>
+          <Body {...chartProps} headerSlot={actionsEl} widgetKey={def.key} />
+        </ErrorBoundary>
       </div>
     </>
   );

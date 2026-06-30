@@ -115,7 +115,18 @@ function barFills(
 
 /** Capa de Nivo (antes de "bars") que pinta un halo desenfocado del color de cada
  *  barra detrás de ella → efecto "neón"/luz sobre fondo oscuro. */
-const NeonGlow = ({ bars }: { bars: { key: string; x: number; y: number; width: number; height: number; color: string }[] }) =>
+interface NeonBar {
+  key: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  index: number;
+  indexValue: string | number;
+  label: string;
+}
+const NeonGlow = ({ bars }: { bars: NeonBar[] }) =>
   bars.map((b) => (
     <rect
       key={b.key}
@@ -513,6 +524,7 @@ function isDarkTheme() {
 
 // Capa personalizada: dibuja la curva con trazo en degradado (url) y un glow sutil.
 // En modo minimalista: trazo fino sin glow, color sólido.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const GlowLine = ({ series, lineGenerator }: any) => {
   const minimal = isMinimalistTheme();
   const dark = isDarkTheme();
@@ -911,20 +923,20 @@ export function NivoSunburst({ root, palette }: { root: SunburstNode; palette?: 
         borderColor={{ from: "color", modifiers: [["darker", 0.5]] }}
         colors={
           palette && palette.length
-            ? (node: any) => {
+            ? (node: { id?: string | number; data?: { color?: string } }) => {
                 // Reparte la paleta por nodo (usando la posición del id en la lista).
                 const k = String(node.id ?? "");
                 let h = 0;
                 for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
                 return palette[h % palette.length];
               }
-            : (node: any) => node.data?.color ?? "#888"
+            : (node: { data?: { color?: string } }) => node.data?.color ?? "#888"
         }
         inheritColorFromParent={false}
         enableArcLabels={false}
         motionConfig="gentle"
         transitionMode="pushIn"
-        tooltip={(node: any) => (
+        tooltip={(node: { color: string; id: string | number; value: string | number; percentage: number }) => (
           <Tip>
             <Swatch color={node.color} />
             {node.id} · <b>{formatEUR(Number(node.value))}</b> ({node.percentage.toFixed(1)}%)
@@ -1008,6 +1020,7 @@ export function NivoGoals({ goals }: { goals: Goal[] }) {
         radialAxisStart={{ tickSize: 0, tickPadding: 6 }}
         circularAxisOuter={null}
         motionConfig="gentle"
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         tooltip={(bar: any) => {
           const g = byName.get(bar.groupId);
           return (

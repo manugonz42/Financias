@@ -6,9 +6,8 @@ import { MonthSelect } from "../components/Controls";
 import { EmptyState } from "../components/EmptyState";
 import { distinctMonths } from "../data/transactions";
 import { spendByCategory } from "../data/stats";
-import { setBudget, deleteBudget, budgetCarryovers } from "../data/budgets";
+import { setBudget, deleteBudget, budgetCarryovers, listRawBudgets } from "../data/budgets";
 import { getBudgetRollover, setBudgetRollover } from "../data/settings";
-import { query } from "../db/database";
 import { formatEUR } from "../lib/format";
 
 export function Presupuestos() {
@@ -38,7 +37,7 @@ export function Presupuestos() {
     (async () => {
       const [slices, brows, carry] = await Promise.all([
         spendByCategory({ month }),
-        query<{ category_id: number; amount: number }>("SELECT category_id, amount FROM budgets"),
+        listRawBudgets(),
         budgetCarryovers(month),
       ]);
       if (cancelled) return;

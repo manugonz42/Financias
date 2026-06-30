@@ -27,6 +27,11 @@ export async function deleteBudget(categoryId: number): Promise<void> {
   await exec("DELETE FROM budgets WHERE category_id = ?", [categoryId]);
 }
 
+/** Presupuestos sin join con categorías (para la vista Presupuestos). */
+export async function listRawBudgets(): Promise<{ category_id: number; amount: number }[]> {
+  return query<{ category_id: number; amount: number }>("SELECT category_id, amount FROM budgets");
+}
+
 function monthIndex(ym: string): number {
   const [y, m] = ym.split("-").map(Number);
   return y * 12 + (m - 1);

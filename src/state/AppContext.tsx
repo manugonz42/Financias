@@ -37,6 +37,8 @@ interface AppState {
   setIconStyle: (s: IconStyle) => void;
   /** Muestra un aviso breve (toast). */
   toast: (msg: string) => void;
+  /** Muestra un toast con botón de acción (p.ej. "Deshacer"). Se cierra al hacer clic o tras 5s. */
+  toastWithAction: (msg: string, actionLabel: string, onAction: () => void) => void;
   /** Contador que se incrementa para forzar recarga de datos tras cambios. */
   version: number;
   reload: () => void;
@@ -54,7 +56,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
   const [palette, setPaletteState] = useState<PaletteId>("categoria");
   const [iconStyle, setIconStyleState] = useState<IconStyle>("color");
-  const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
+  const [toasts, setToasts] = useState<{ id: number; msg: string; action?: { label: string; onAction: () => void } }[]>([]);
   const [version, setVersion] = useState(0);
 
   const reload = useCallback(() => setVersion((v) => v + 1), []);
@@ -63,6 +65,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const id = Date.now() + Math.random();
     setToasts((t) => [...t, { id, msg }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2600);
+  }, []);
+
+  const toastWithAction = useCallback((msg: string, actionLabel: string, onAction: () => void) => {
+    const id = Date.now() + Math.random();
+    setToasts((t) => [...t, { id, msg, action: { label: actionLabel, onAction } }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 5000);
   }, []);
 
   useEffect(() => {
@@ -141,6 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         iconStyle,
         setIconStyle,
         toast,
+        toastWithAction,
         version,
         reload,
       }}
@@ -148,7 +157,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="toast-container">
         {toasts.map((t) => (
-          <div key={t.id} className="toast">{t.msg}</div>
+          <div key={t.id} className="toast">
+            <span>{t.msg}</span>
+            {t.action && (
+              <button
+                className="link-btn"
+                style={{ marginLeft: 8, fontWeight: 600, fontSize: 12 }}
+                onClick={() => { t.action!.onAction(); setToasts((prev) => prev.filter((x) => x.id !== t.id)); }}
+              >
+                {t.action.label}
+              </button>
+            )}
+          </div>
         ))}
       </div>
     </Ctx.Provider>

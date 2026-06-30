@@ -1,4 +1,4 @@
-import { query, exec } from "../db/database";
+import { query, exec, getDB } from "../db/database";
 import { normalize } from "../lib/text";
 import type { ReceiptItem } from "../types";
 
@@ -39,15 +39,23 @@ export async function setReceiptItems(
   txId: number,
   items: { description: string; amount: number; category_id?: number | null }[],
 ): Promise<void> {
-  await exec("DELETE FROM receipt_items WHERE transaction_id = ?", [txId]);
-  for (const it of items) {
-    if (!it.description.trim()) continue;
-    await exec(
-      "INSERT INTO receipt_items (transaction_id, description, amount, category_id) VALUES (?, ?, ?, ?)",
-      [txId, it.description.trim(), Math.abs(it.amount), it.category_id ?? null],
-    );
-    // Aprende la categoría del producto para autoasignarla la próxima vez.
-    if (it.category_id != null) await learnItemCategory(it.description, it.category_id);
+  const db = await getDB();
+  await db.execute("BEGIN");
+  try {
+    await db.execute("DELETE FROM receipt_items WHERE transaction_id = ?", [txId]);
+    for (const it of items) {
+      if (!it.description.trim()) continue;
+      await db.execute(
+        "INSERT INTO receipt_items (transaction_id, description, amount, category_id) VALUES (?, ?, ?, ?)",
+        [txId, it.description.trim(), Math.abs(it.amount), it.category_id ?? null],
+      );
+      // Aprende la categoría del producto para autoasignarla la próxima vez.
+      if (it.category_id != null) await learnItemCategory(it.description, it.category_id);
+    }
+    await db.execute("COMMIT");
+  } catch (e) {
+    await db.execute("ROLLBACK");
+    throw e;
   }
 }
 

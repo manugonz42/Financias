@@ -40,7 +40,7 @@ export async function spendByCategoryId(f: TxFilters): Promise<CategoryValue[]> 
   return query<CategoryValue>(
     `SELECT t.category_id AS id, SUM(t.amt) AS value
      FROM ${EFFECTIVE_TX} t
-     ${clause} AND t.category_id IS NOT NULL
+     ${clause ? clause + " AND" : "WHERE"} t.category_id IS NOT NULL
      GROUP BY t.category_id`,
     params,
   );
@@ -262,7 +262,7 @@ export interface IncomeDebugRow {
 
 export async function debugIncomeBreakdown(from?: string, to?: string): Promise<IncomeDebugRow[]> {
   const conditions = ["t.importe > 0", "t.is_internal = 0"];
-  const params: string[] = [];
+  const params: unknown[] = [];
   if (from) { conditions.push("t.fecha_operacion >= ?"); params.push(from); }
   if (to) { conditions.push("t.fecha_operacion <= ?"); params.push(to); }
   return query<IncomeDebugRow>(

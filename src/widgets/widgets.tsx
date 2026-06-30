@@ -38,7 +38,7 @@ export interface WidgetProps {
  * grandes y poco representativos del día a día). Se identifican por nombre e
  * incluyen sus subcategorías.
  */
-const EXCLUDED_EXPENSE_NAMES = ["Alquiler", "Casa", "Coche y Moto"];
+const EXCLUDED_EXPENSE_NAMES = ["Alquiler", "Hogar", "Coche y Moto"];
 
 const normalize = (s: string) => s.trim().toLowerCase();
 
@@ -139,7 +139,9 @@ function scope(p: WidgetProps): TxFilters {
 const KpiBody: FC<WidgetProps> = (p) => {
   const [k, setK] = useState<KpiSummary | null>(null);
   useEffect(() => {
-    void kpis(scope(p)).then(setK);
+    let cancelled = false;
+    void kpis(scope(p)).then((data) => { if (!cancelled) setK(data); });
+    return () => { cancelled = true; };
   }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   if (!k) return <span className="muted">…</span>;
   return (
@@ -178,11 +180,14 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
   const to = range?.to ?? p.to;
 
   useEffect(() => {
+    let cancelled = false;
     void spendByCategoryId(scope({ ...p, from, to })).then((rows) => {
+      if (cancelled) return;
       setValueById(new Map(rows.map((r) => [r.id, r.value])));
       setStack([]); // al cambiar filtros/datos, vuelve a la vista de padres
       setHidden(new Set()); // y también limpia las categorías ocultadas
     });
+    return () => { cancelled = true; };
   }, [p.accountId, from, to, p.excludeInternal, p.version]);
 
   const toggleHidden = (id: number) => {
@@ -254,7 +259,9 @@ const CategoryDonutBody: FC<WidgetProps> = (p) => {
 const NetWorthBody: FC<WidgetProps> = (p) => {
   const [nw, setNw] = useState<NetWorthNow | null>(null);
   useEffect(() => {
-    void netWorthNow().then(setNw);
+    let cancelled = false;
+    void netWorthNow().then((data) => { if (!cancelled) setNw(data); });
+    return () => { cancelled = true; };
   }, [p.version]);
   if (!nw) return <span className="muted">…</span>;
   return (
@@ -276,7 +283,9 @@ const MonthlyBarsBody: FC<WidgetProps> = (p) => {
   const from = range?.from ?? p.from;
   const to = range?.to ?? p.to;
   useEffect(() => {
-    void monthlyFlows({ ...scope(p), from, to }).then(setData);
+    let cancelled = false;
+    void monthlyFlows({ ...scope(p), from, to }).then((data) => { if (!cancelled) setData(data); });
+    return () => { cancelled = true; };
   }, [p.accountId, from, to, p.excludeInternal, p.version]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
   return (
@@ -300,8 +309,10 @@ const BalanceLineBody: FC<WidgetProps> = (p) => {
   const { colors, override, setOverride } = useChartPalette(p.widgetKey);
   const { isMinimalist } = useApp();
   useEffect(() => {
-    if (p.accountId === "all") void netWorthSeries().then(setData);
-    else void accountBalanceSeries(p.accountId).then(setData);
+    let cancelled = false;
+    const load = p.accountId === "all" ? netWorthSeries() : accountBalanceSeries(p.accountId);
+    void load.then((data) => { if (!cancelled) setData(data); });
+    return () => { cancelled = true; };
   }, [p.accountId, p.version]);
   if (data.length === 0) return <span className="muted">Sin datos.</span>;
   const from = range?.from ?? p.from;
@@ -382,7 +393,9 @@ const CashBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<CashPoint[]>([]);
   const { colors, override, setOverride } = useChartPalette(p.widgetKey);
   useEffect(() => {
-    void cashByMonth(scope(p)).then(setData);
+    let cancelled = false;
+    void cashByMonth(scope(p)).then((data) => { if (!cancelled) setData(data); });
+    return () => { cancelled = true; };
   }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   if (data.length === 0) return <span className="muted">Sin disposiciones de efectivo.</span>;
   const total = data.reduce((s, r) => s + r.total, 0);
@@ -400,7 +413,9 @@ const BudgetsBody: FC<WidgetProps> = (p) => {
   // Los presupuestos son mensuales: se muestran los del mes de la fecha «hasta».
   const month = monthKey(p.to || "");
   useEffect(() => {
-    if (month) void listBudgets(month).then(setRows);
+    let cancelled = false;
+    if (month) void listBudgets(month).then((data) => { if (!cancelled) setRows(data); });
+    return () => { cancelled = true; };
   }, [month, p.version]);
   if (rows.length === 0)
     return <span className="muted">Define presupuestos en la pestaña «Presupuestos».</span>;
@@ -410,7 +425,9 @@ const BudgetsBody: FC<WidgetProps> = (p) => {
 const SubscriptionsBody: FC<WidgetProps> = (p) => {
   const [rows, setRows] = useState<Subscription[]>([]);
   useEffect(() => {
-    void detectSubscriptions().then(setRows);
+    let cancelled = false;
+    void detectSubscriptions().then((data) => { if (!cancelled) setRows(data); });
+    return () => { cancelled = true; };
   }, [p.version]);
   if (rows.length === 0) return <span className="muted">No se detectaron pagos recurrentes.</span>;
   return (
@@ -432,7 +449,9 @@ const SubscriptionsBody: FC<WidgetProps> = (p) => {
 const GoalsBody: FC<WidgetProps> = (p) => {
   const [goals, setGoals] = useState<Goal[]>([]);
   useEffect(() => {
-    void listGoals().then(setGoals);
+    let cancelled = false;
+    void listGoals().then((data) => { if (!cancelled) setGoals(data); });
+    return () => { cancelled = true; };
   }, [p.version]);
   if (goals.length === 0)
     return <span className="muted">Define metas en la pestaña «Metas».</span>;
@@ -442,7 +461,9 @@ const GoalsBody: FC<WidgetProps> = (p) => {
 const UpcomingBody: FC<WidgetProps> = (p) => {
   const [rows, setRows] = useState<ScheduledRow[]>([]);
   useEffect(() => {
-    void listScheduled().then(setRows);
+    let cancelled = false;
+    void listScheduled().then((data) => { if (!cancelled) setRows(data); });
+    return () => { cancelled = true; };
   }, [p.version]);
   if (rows.length === 0)
     return <span className="muted">Programa pagos en la pestaña «Programados».</span>;
@@ -471,7 +492,9 @@ const UpcomingBody: FC<WidgetProps> = (p) => {
 const ReceiptItemsBody: FC<WidgetProps> = (p) => {
   const [rows, setRows] = useState<ItemAggregate[]>([]);
   useEffect(() => {
-    void topReceiptItems(12).then(setRows);
+    let cancelled = false;
+    void topReceiptItems(12).then((data) => { if (!cancelled) setRows(data); });
+    return () => { cancelled = true; };
   }, [p.version]);
   if (rows.length === 0)
     return <span className="muted">Desglosa recibos (📎 en Movimientos) para ver en qué se va el dinero.</span>;
@@ -498,7 +521,9 @@ const CalendarBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<DailySpend[]>([]);
   const { colors, override, setOverride } = useChartPalette(p.widgetKey);
   useEffect(() => {
-    void dailySpend(scope(p)).then(setData);
+    let cancelled = false;
+    void dailySpend(scope(p)).then((data) => { if (!cancelled) setData(data); });
+    return () => { cancelled = true; };
   }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   if (data.length === 0) return <span className="muted">Sin gastos en el periodo seleccionado.</span>;
   return (
@@ -514,7 +539,12 @@ const SunburstBody: FC<WidgetProps> = (p) => {
   const [valueById, setValueById] = useState<Map<number, number>>(new Map());
   const { colors, override, setOverride } = useChartPalette(p.widgetKey);
   useEffect(() => {
-    void spendByCategoryId(scope(p)).then((rows) => setValueById(new Map(rows.map((r) => [r.id, r.value]))));
+    let cancelled = false;
+    void spendByCategoryId(scope(p)).then((rows) => {
+      if (cancelled) return;
+      setValueById(new Map(rows.map((r) => [r.id, r.value])));
+    });
+    return () => { cancelled = true; };
   }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
   const root = useMemo(() => categorySunburst(categories, valueById), [categories, valueById]);
   if (valueById.size === 0) return <span className="muted">Sin gastos en el periodo seleccionado.</span>;
@@ -531,6 +561,7 @@ const MonthCompareBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<{ now: number; prev: number } | null>(null);
   const excludedIds = useMemo(() => excludedExpenseIds(categories), [categories]);
   useEffect(() => {
+    let cancelled = false;
     const d = new Date();
     const thisM = ym(d);
     const prevM = ym(new Date(d.getFullYear(), d.getMonth() - 1, 1));
@@ -540,8 +571,9 @@ const MonthCompareBody: FC<WidgetProps> = (p) => {
       excludeCategoryIds: excludedIds,
     };
     void Promise.all([kpis({ ...base, month: thisM }), kpis({ ...base, month: prevM })]).then(
-      ([a, b]) => setData({ now: a.expense, prev: b.expense }),
+      ([a, b]) => { if (!cancelled) setData({ now: a.expense, prev: b.expense }); },
     );
+    return () => { cancelled = true; };
   }, [p.accountId, p.excludeInternal, p.version, excludedIds]);
 
   if (!data) return <span className="muted">…</span>;
@@ -588,6 +620,7 @@ const MonthExpenseBody: FC<WidgetProps> = (p) => {
   const excluded = useMemo(() => excludedRoots(categories), [categories]);
 
   useEffect(() => {
+    let cancelled = false;
     const d = new Date();
     const thisM = ym(d);
     const prevM = ym(new Date(d.getFullYear(), d.getMonth() - 1, 1));
@@ -597,8 +630,9 @@ const MonthExpenseBody: FC<WidgetProps> = (p) => {
       excludeCategoryIds: excludedIds,
     };
     void Promise.all([kpis({ ...base, month: thisM }), kpis({ ...base, month: prevM })]).then(
-      ([a, b]) => setData({ now: a.expense, prev: b.expense, day: d.getDate() }),
+      ([a, b]) => { if (!cancelled) setData({ now: a.expense, prev: b.expense, day: d.getDate() }); },
     );
+    return () => { cancelled = true; };
   }, [p.accountId, p.excludeInternal, p.version, excludedIds]);
 
   if (!data) return <span className="muted">…</span>;
@@ -670,12 +704,14 @@ function useCategoryCompare(p: WidgetProps) {
   const [rows, setRows] = useState<CatCompareRow[] | null>(null);
   const [mode, setMode] = useState<"eur" | "pct">("eur");
   useEffect(() => {
+    let cancelled = false;
     const d = new Date();
     const thisM = ym(d);
     const prevM = ym(new Date(d.getFullYear(), d.getMonth() - 1, 1));
     void categoryCompare(categories, { accountId: p.accountId, excludeInternal: p.excludeInternal }, thisM, prevM).then(
-      setRows,
+      (data) => { if (!cancelled) setRows(data); },
     );
+    return () => { cancelled = true; };
   }, [p.accountId, p.excludeInternal, p.version, categories]);
   return { rows, mode, toggle: () => setMode((m) => (m === "eur" ? "pct" : "eur")) };
 }
@@ -771,7 +807,11 @@ const IncomeDebugBody: FC<WidgetProps> = (p) => {
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const from = range?.from ?? p.from;
   const to = range?.to ?? p.to;
-  useEffect(() => { void debugIncomeBreakdown(from, to).then(setRows); }, [from, to, p.version]);
+  useEffect(() => {
+    let cancelled = false;
+    void debugIncomeBreakdown(from, to).then((data) => { if (!cancelled) setRows(data); });
+    return () => { cancelled = true; };
+  }, [from, to, p.version]);
   if (rows.length === 0) return <span className="muted">Sin datos.</span>;
   return (
     <div className="widget" style={{ gap: 6 }}>

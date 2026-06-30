@@ -23,7 +23,7 @@
 export type PdfItem = { str: string; x: number; y: number };
 export type PdfPage = PdfItem[];
 
-export type AccountType = "checking" | "savings";
+export type AccountType = import("../types").AccountType;
 
 export interface ParsedAccount {
   type: AccountType;

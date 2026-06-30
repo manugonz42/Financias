@@ -176,10 +176,23 @@ export async function deleteCategory(id: number): Promise<void> {
   // Destino de movimientos/splits/reglas: el padre, o el fallback del tipo si es raíz.
   let target = parentId;
   if (target == null) {
-    const fallbackName =
-      cat.kind === "ingreso" ? FALLBACK_INCOME : cat.kind === "interno" ? INTERNAL_CATEGORY : FALLBACK_EXPENSE;
-    const fb = (await query<{ id: number }>("SELECT id FROM categories WHERE name = ?", [fallbackName]))[0];
-    target = fb && fb.id !== id ? fb.id : null;
+    // Buscar una categoría válida del mismo tipo que no sea la que se borra.
+    // Prioriza raíces del mismo tipo; si no hay, cualquier raíz disponible.
+    const fb = (await query<{ id: number }>(
+      `SELECT id FROM categories WHERE kind = ? AND id != ? AND parent_id IS NULL ORDER BY name LIMIT 1`,
+      [cat.kind, id],
+    ))[0];
+    if (fb) {
+      target = fb.id;
+    } else {
+      const fallbackName =
+        cat.kind === "ingreso" ? FALLBACK_INCOME : cat.kind === "interno" ? INTERNAL_CATEGORY : FALLBACK_EXPENSE;
+      const anyRoot = (await query<{ id: number }>(
+        "SELECT id FROM categories WHERE name = ? AND id != ? LIMIT 1",
+        [fallbackName, id],
+      ))[0];
+      target = anyRoot?.id ?? null;
+    }
   }
 
   await exec("UPDATE categories SET parent_id = ? WHERE parent_id = ?", [parentId, id]);

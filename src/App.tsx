@@ -3,6 +3,7 @@ import { Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_LUCIDE } from "./lib/icons";
 import { useApp } from "./state/AppContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { Dashboard } from "./views/Dashboard";
 import { Movimientos } from "./views/Movimientos";
@@ -107,17 +108,19 @@ export default function App() {
         </nav>
       </aside>
       <main className="flex-1 overflow-y-auto p-7">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/movimientos" element={<Movimientos />} />
-          <Route path="/categorizar" element={<Categorizar />} />
-          <Route path="/presupuestos" element={<Presupuestos />} />
-          <Route path="/metas" element={<Metas />} />
-          <Route path="/programados" element={<Programados />} />
-          <Route path="/inversiones" element={<Inversiones />} />
-          <Route path="/importar" element={<Importar />} />
-          <Route path="/ajustes" element={<Ajustes />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/movimientos" element={<Movimientos />} />
+            <Route path="/categorizar" element={<Categorizar />} />
+            <Route path="/presupuestos" element={<Presupuestos />} />
+            <Route path="/metas" element={<Metas />} />
+            <Route path="/programados" element={<Programados />} />
+            <Route path="/inversiones" element={<Inversiones />} />
+            <Route path="/importar" element={<Importar />} />
+            <Route path="/ajustes" element={<Ajustes />} />
+          </Routes>
+        </ErrorBoundary>
       </main>
       <UpdateBanner />
     </div>
