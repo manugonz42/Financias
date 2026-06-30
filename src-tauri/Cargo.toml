@@ -39,3 +39,11 @@ windows = { version = "0.58", features = [
   "Win32_System_Com",
 ] }
 
+# OCR nativo de macOS (Apple Vision). Solo se compila en macOS.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSData", "NSString", "NSURL", "NSArray", "NSDictionary"] }
+objc2-core-graphics = { version = "0.3", features = ["CGImage", "CGColorSpace"] }
+core-foundation = "0.10"
+core-graphics = "0.24"
+

@@ -61,10 +61,83 @@ fn ocr_windows(path: String) -> Result<Vec<String>, String> {
     })
 }
 
-#[cfg(not(windows))]
+// OCR nativo de macOS: usa Apple Vision (VNRecognizeTextRequest).
+#[cfg(target_os = "macos")]
+#[tauri::command]
+fn ocr_image(path: String) -> Result<Vec<String>, String> {
+    use objc2::rc::autoreleasepool;
+    use objc2::runtime::AnyObject;
+    use objc2::{class, msg_send, msg_send_id};
+
+    autoreleasepool(|| unsafe {
+        // 1. Leer la imagen de disco a NSData.
+        let ns_path = objc2_foundation::NSString::from_str(&path);
+        let ns_url = objc2_foundation::NSURL::fileURLWithPath(&ns_path);
+        let data = objc2_foundation::NSData::dataWithContentsOfURL(&ns_url)
+            .ok_or_else(|| "No se pudo leer la imagen".to_string())?;
+
+        // 2. Crear CIImage desde los datos.
+        let ci_image_class = class!(CIImage);
+        let ci_image: *mut AnyObject = msg_send![ci_image_class, imageWithData: &*data];
+        if ci_image.is_null() {
+            return Err("No se pudo crear CIImage desde los datos".to_string());
+        }
+
+        // 3. Crear VNRecognizeTextRequest.
+        let request_class = class!(VNRecognizeTextRequest);
+        let request: *mut AnyObject = msg_send![request_class, new];
+        // Nivel accurado (1) y corrección de idioma.
+        let _: () = msg_send![request, setRecognitionLevel: 1u64];
+        let _: () = msg_send![request, setUsesLanguageCorrection: true];
+        // Idiomas: español + inglés.
+        let es = objc2_foundation::NSString::from_str("es-ES");
+        let en = objc2_foundation::NSString::from_str("en-US");
+        let languages =
+            objc2_foundation::NSArray::from_vec(vec![es, en]);
+        let _: () = msg_send![request, setRecognitionLanguages: &*languages];
+
+        // 4. Crear VNImageRequestHandler y ejecutar.
+        let handler_class = class!(VNImageRequestHandler);
+        let empty_opts = objc2_foundation::NSDictionary::new();
+        let handler: *mut AnyObject = msg_send![handler_class, alloc];
+        let handler: *mut AnyObject =
+            msg_send![handler, initWithCIImage: &*ci_image options: &*empty_opts];
+        let requests = objc2_foundation::NSArray::from_vec(vec![request]);
+        let _: () = msg_send![handler, performRequests: &*requests];
+
+        // 5. Recoger resultados del request.
+        let results: *mut AnyObject = msg_send![request, results];
+        if results.is_null() {
+            return Ok(Vec::new());
+        }
+        let count: usize = msg_send![results, count];
+        let mut lines = Vec::with_capacity(count);
+        for i in 0..count {
+            let obs: *mut AnyObject = msg_send![results, objectAtIndex: i];
+            // VNRecognizedTextObservation → topCandidates(1) → firstObject → string
+            let candidates: *mut AnyObject = msg_send![obs, topCandidates: 1u64];
+            if candidates.is_null() {
+                continue;
+            }
+            let candidate: *mut AnyObject = msg_send![candidates, firstObject];
+            if candidate.is_null() {
+                continue;
+            }
+            let text: objc2_foundation::NSString = msg_send_id![candidate, string];
+            let rust_str = text.to_string();
+            if !rust_str.is_empty() {
+                lines.push(rust_str);
+            }
+        }
+        Ok(lines)
+    })
+}
+
+// Fallback para Linux (sin OCR nativo).
+#[cfg(not(any(windows, target_os = "macos")))]
 #[tauri::command]
 fn ocr_image(_path: String) -> Result<Vec<String>, String> {
-    Err("El OCR nativo solo está disponible en Windows por ahora.".to_string())
+    Err("El OCR nativo solo está disponible en Windows y macOS.".to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
