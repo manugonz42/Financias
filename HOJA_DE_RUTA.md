@@ -53,8 +53,8 @@ Leyenda: ✅ hecho · 🔄 en curso · ⏳ pendiente · 💡 idea/backlog
 - ✅ **Auto-actualización** (`tauri-plugin-updater`): al iniciar comprueba la última Release de
   GitHub; si hay versión nueva avisa y, al pulsar «Actualizar», descarga/instala y reinicia.
   Requiere los secretos de firma en GitHub (`TAURI_SIGNING_PRIVATE_KEY` / `..._PASSWORD`).
-- ⏳ Build nativo **macOS** verificado en el Mac (M4) + **OCR de Apple Vision** (el de Windows
-  ya está; falta el equivalente macOS).
+- ✅ Build nativo **macOS** verificado en el Mac (M4) + **OCR de Apple Vision** implementado
+   (usa `VNRecognizeTextRequest` vía `objc2`; español + inglés, modo accurado).
 - ⏳ Documentar en README la instalación del instalador para el usuario final.
 
 ---
@@ -62,7 +62,7 @@ Leyenda: ✅ hecho · 🔄 en curso · ⏳ pendiente · 💡 idea/backlog
 ## Próximos pasos / pendiente
 
 - ⏳ **Módulo de Inversiones** (hueco preparado en `views/Inversiones.tsx`, sin implementar).
-- ⏳ **OCR de macOS** (Apple Vision) — el de Windows ya está; implementar y probar en el Mac.
+- ✅ **OCR de macOS** (Apple Vision) — implementado en `lib.rs` con `objc2`.
 - ⏳ Pruebas en macOS (M4) y ajuste de rendimiento/empaquetado.
 
 ---
@@ -102,8 +102,8 @@ y desbloquean el patrimonio neto, el mayor diferenciador.
 8. ✅ **Adjuntar recibos + desglose por líneas** — `transactions.receipt_path` + tabla
    `receipt_items`. Modal 📎 en Movimientos: adjuntar archivo con vista previa de imagen y
    desglose por producto/importe/categoría. Widget «En qué se gasta» (top productos).
-   - ✅ **OCR nativo de Windows** (`Windows.Media.Ocr` vía Rust) + parser `receiptParse`
-     (producto/importe/fecha/total por posición). *Pendiente: OCR de macOS (Apple Vision).*
+    - ✅ **OCR nativo de Windows** (`Windows.Media.Ocr` vía Rust) + parser `receiptParse`
+      (producto/importe/fecha/total por posición). ✅ **OCR de macOS** (`Apple Vision` vía `objc2`).
    - ✅ **Aprendizaje por producto** (`item_rules`): cada producto categorizado se recuerda.
    - ✅ **Import masivo de tickets** (pestaña Importar): empareja al movimiento por total/fecha/
      palabras clave, confirma o elige a mano, y cola «en espera» (`pending_receipts`).
