@@ -3,17 +3,17 @@ import { useApp } from "../state/AppContext";
 
 /**
  * Filtro de categorías con checkbox multi-selección.
- * Por defecto muestra TODAS las categorías seleccionadas.
- * Al hacer clic se van QUITANDO (exclusión).
- * Si selectedIds está vacío → se muestran todas (sin filtro).
+ * Patrón igual al rosco: Set de IDs ocultos.
+ * Por defecto todas visibles (Set vacío).
+ * Al marcar se ocultan, al desmarcar se muestran.
  */
 export function CategoryFilter({
-  selectedIds,
-  onChange,
+  hiddenIds,
+  onToggleId,
   kind = "gasto",
 }: {
-  selectedIds: number[];
-  onChange: (ids: number[]) => void;
+  hiddenIds: Set<number>;
+  onToggleId: (id: number) => void;
   kind?: "gasto" | "ingreso" | "interno";
 }) {
   const { categories } = useApp();
@@ -31,27 +31,22 @@ export function CategoryFilter({
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
-  function toggle(id: number) {
-    if (selectedIds.includes(id)) {
-      onChange(selectedIds.filter((i) => i !== id));
-    } else {
-      onChange([...selectedIds, id]);
+  function hideAll() {
+    for (const cat of filtered) {
+      if (!hiddenIds.has(cat.id)) onToggleId(cat.id);
     }
-  }
-
-  function excludeAll() {
-    onChange([]);
     setOpen(false);
   }
 
-  function includeAll() {
-    onChange(filtered.map((c) => c.id));
+  function showAll() {
+    for (const cat of filtered) {
+      if (hiddenIds.has(cat.id)) onToggleId(cat.id);
+    }
     setOpen(false);
   }
 
-  // Si selectedIds está vacío, se considera "todas seleccionadas"
-  const allSelected = selectedIds.length === 0 || selectedIds.length === filtered.length;
-  const excludedCount = selectedIds.length === 0 ? 0 : filtered.length - selectedIds.length;
+  const hiddenCount = hiddenIds.size;
+  const allVisible = hiddenCount === 0;
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -68,8 +63,8 @@ export function CategoryFilter({
           height: 28,
           borderRadius: 4,
           border: "1px solid var(--border)",
-          background: allSelected ? "transparent" : "var(--accent)",
-          color: allSelected ? "var(--text-dim)" : "#fff",
+          background: allVisible ? "transparent" : "var(--accent)",
+          color: allVisible ? "var(--text-dim)" : "#fff",
           cursor: "pointer",
           padding: 0,
           transition: "all 0.15s",
@@ -80,8 +75,8 @@ export function CategoryFilter({
         </svg>
       </button>
 
-      {/* Badge con contador de excluidas */}
-      {excludedCount > 0 && (
+      {/* Badge con contador de ocultas */}
+      {hiddenCount > 0 && (
         <span style={{
           position: "absolute",
           top: -4,
@@ -99,7 +94,7 @@ export function CategoryFilter({
           padding: "0 3px",
           pointerEvents: "none",
         }}>
-          -{excludedCount}
+          -{hiddenCount}
         </span>
       )}
 
@@ -122,13 +117,13 @@ export function CategoryFilter({
           {/* Acciones rápidas */}
           <div style={{ display: "flex", gap: 4, padding: "4px 6px", borderBottom: "1px solid var(--border)", marginBottom: 4 }}>
             <button
-              onClick={includeAll}
+              onClick={showAll}
               style={{ flex: 1, fontSize: 10, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: "2px 0" }}
             >
               Todas
             </button>
             <button
-              onClick={excludeAll}
+              onClick={hideAll}
               style={{ flex: 1, fontSize: 10, color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textAlign: "right", padding: "2px 0" }}
             >
               Ninguna
@@ -137,8 +132,7 @@ export function CategoryFilter({
 
           {/* Lista de categorías con checkbox */}
           {filtered.map((cat) => {
-            // checked = true si está en selectedIds O si selectedIds está vacío (todas)
-            const checked = selectedIds.length === 0 || selectedIds.includes(cat.id);
+            const hidden = hiddenIds.has(cat.id);
             return (
               <label
                 key={cat.id}
@@ -151,16 +145,16 @@ export function CategoryFilter({
                   cursor: "pointer",
                   fontSize: 12,
                   color: "var(--text)",
-                  background: checked ? "transparent" : "var(--bg-soft)",
+                  background: hidden ? "var(--bg-soft)" : "transparent",
                   transition: "background 0.1s",
                 }}
-                onMouseEnter={(e) => { if (checked) e.currentTarget.style.background = "var(--bg-elev)"; }}
-                onMouseLeave={(e) => { if (checked) e.currentTarget.style.background = "transparent"; }}
+                onMouseEnter={(e) => { if (!hidden) e.currentTarget.style.background = "var(--bg-elev)"; }}
+                onMouseLeave={(e) => { if (!hidden) e.currentTarget.style.background = "transparent"; }}
               >
                 <input
                   type="checkbox"
-                  checked={checked}
-                  onChange={() => toggle(cat.id)}
+                  checked={!hidden}
+                  onChange={() => onToggleId(cat.id)}
                   style={{ accentColor: "var(--accent)", width: 14, height: 14, margin: 0 }}
                 />
                 <span style={{ fontSize: 13 }}>{cat.icon}</span>
