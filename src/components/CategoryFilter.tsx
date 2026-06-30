@@ -3,8 +3,9 @@ import { useApp } from "../state/AppContext";
 
 /**
  * Filtro de categorías con checkbox multi-selección.
- * Muestra un cuadrado con icono de filtro que abre un dropdown con checkboxes.
- * Debajo muestra las categorías seleccionadas como badges.
+ * Por defecto muestra TODAS las categorías seleccionadas.
+ * Al hacer clic se van QUITANDO (exclusión).
+ * Si selectedIds está vacío → se muestran todas (sin filtro).
  */
 export function CategoryFilter({
   selectedIds,
@@ -38,17 +39,19 @@ export function CategoryFilter({
     }
   }
 
-  function clear() {
+  function excludeAll() {
     onChange([]);
     setOpen(false);
   }
 
-  function selectAll() {
+  function includeAll() {
     onChange(filtered.map((c) => c.id));
     setOpen(false);
   }
 
-  const hasSelection = selectedIds.length > 0;
+  // Si selectedIds está vacío, se considera "todas seleccionadas"
+  const allSelected = selectedIds.length === 0 || selectedIds.length === filtered.length;
+  const excludedCount = selectedIds.length === 0 ? 0 : filtered.length - selectedIds.length;
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -65,8 +68,8 @@ export function CategoryFilter({
           height: 28,
           borderRadius: 4,
           border: "1px solid var(--border)",
-          background: hasSelection ? "var(--accent)" : "transparent",
-          color: hasSelection ? "#fff" : "var(--text-dim)",
+          background: allSelected ? "transparent" : "var(--accent)",
+          color: allSelected ? "var(--text-dim)" : "#fff",
           cursor: "pointer",
           padding: 0,
           transition: "all 0.15s",
@@ -77,8 +80,8 @@ export function CategoryFilter({
         </svg>
       </button>
 
-      {/* Badge con contador si hay selección */}
-      {hasSelection && (
+      {/* Badge con contador de excluidas */}
+      {excludedCount > 0 && (
         <span style={{
           position: "absolute",
           top: -4,
@@ -96,7 +99,7 @@ export function CategoryFilter({
           padding: "0 3px",
           pointerEvents: "none",
         }}>
-          {selectedIds.length}
+          -{excludedCount}
         </span>
       )}
 
@@ -119,13 +122,13 @@ export function CategoryFilter({
           {/* Acciones rápidas */}
           <div style={{ display: "flex", gap: 4, padding: "4px 6px", borderBottom: "1px solid var(--border)", marginBottom: 4 }}>
             <button
-              onClick={selectAll}
+              onClick={includeAll}
               style={{ flex: 1, fontSize: 10, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: "2px 0" }}
             >
               Todas
             </button>
             <button
-              onClick={clear}
+              onClick={excludeAll}
               style={{ flex: 1, fontSize: 10, color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textAlign: "right", padding: "2px 0" }}
             >
               Ninguna
@@ -134,7 +137,8 @@ export function CategoryFilter({
 
           {/* Lista de categorías con checkbox */}
           {filtered.map((cat) => {
-            const checked = selectedIds.includes(cat.id);
+            // checked = true si está en selectedIds O si selectedIds está vacío (todas)
+            const checked = selectedIds.length === 0 || selectedIds.includes(cat.id);
             return (
               <label
                 key={cat.id}
@@ -147,11 +151,11 @@ export function CategoryFilter({
                   cursor: "pointer",
                   fontSize: 12,
                   color: "var(--text)",
-                  background: checked ? "var(--bg-soft)" : "transparent",
+                  background: checked ? "transparent" : "var(--bg-soft)",
                   transition: "background 0.1s",
                 }}
-                onMouseEnter={(e) => { if (!checked) e.currentTarget.style.background = "var(--bg-elev)"; }}
-                onMouseLeave={(e) => { if (!checked) e.currentTarget.style.background = "transparent"; }}
+                onMouseEnter={(e) => { if (checked) e.currentTarget.style.background = "var(--bg-elev)"; }}
+                onMouseLeave={(e) => { if (checked) e.currentTarget.style.background = "transparent"; }}
               >
                 <input
                   type="checkbox"
@@ -167,66 +171,6 @@ export function CategoryFilter({
           })}
         </div>
       )}
-    </div>
-  );
-}
-
-/**
- * Muestra las categorías seleccionadas como badges inline.
- */
-export function SelectedCategoriesBadge({
-  selectedIds,
-  onRemove,
-}: {
-  selectedIds: number[];
-  onRemove: (id: number) => void;
-}) {
-  const { categories } = useApp();
-  if (selectedIds.length === 0) return null;
-
-  const selected = categories.filter((c) => selectedIds.includes(c.id));
-
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-      {selected.map((cat) => (
-        <span
-          key={cat.id}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-            padding: "2px 6px",
-            borderRadius: 4,
-            background: "var(--bg-elev)",
-            border: "1px solid var(--border)",
-            fontSize: 10,
-            color: "var(--text)",
-          }}
-        >
-          <span>{cat.icon}</span>
-          <span>{cat.name}</span>
-          <button
-            onClick={() => onRemove(cat.id)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 12,
-              height: 12,
-              borderRadius: 2,
-              border: "none",
-              background: "transparent",
-              color: "var(--text-dim)",
-              cursor: "pointer",
-              padding: 0,
-              fontSize: 10,
-              lineHeight: 1,
-            }}
-          >
-            ×
-          </button>
-        </span>
-      ))}
     </div>
   );
 }
