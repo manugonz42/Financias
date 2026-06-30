@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../state/AppContext";
-import { listScheduled, createScheduled, updateScheduled, deleteScheduled, markPaid, type ScheduledRow } from "../data/scheduled";
+import { listScheduled, createScheduled, updateScheduled, deleteScheduled, markPaid, autoGenerateFromSubscriptions, type ScheduledRow } from "../data/scheduled";
 import { FREQ_LABEL, daysUntil } from "../lib/schedule";
 import { EmptyState } from "../components/EmptyState";
 import { formatEUR, formatDate } from "../lib/format";
@@ -21,6 +21,7 @@ export function Programados() {
   const [rows, setRows] = useState<ScheduledRow[]>([]);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
+  const [detecting, setDetecting] = useState(false);
 
   const load = useCallback(async () => setRows(await listScheduled()), []);
   useEffect(() => { void load(); }, [load, version]);
@@ -30,11 +31,33 @@ export function Programados() {
     reload();
   }
 
+  async function autoDetect() {
+    setDetecting(true);
+    try {
+      const result = await autoGenerateFromSubscriptions();
+      if (result.created > 0) {
+        toast(`${result.created} pago(s) auto-generado(s): ${result.names.join(", ")}`);
+      } else {
+        toast(result.skipped > 0
+          ? `No se crearon pagos — ${result.skipped} ya existían como programados.`
+          : "No se detectaron suscripciones recurrentes.");
+      }
+      await refresh();
+    } finally {
+      setDetecting(false);
+    }
+  }
+
   return (
     <div>
       <div className="topbar">
         <h1>Programados</h1>
-        <button onClick={() => { setAdding(true); setEditing(null); }}>+ Nuevo pago</button>
+        <div className="row" style={{ gap: 8 }}>
+          <button onClick={() => void autoDetect()} disabled={detecting}>
+            {detecting ? "Detectando…" : "Auto-detectar"}
+          </button>
+          <button onClick={() => { setAdding(true); setEditing(null); }}>+ Nuevo pago</button>
+        </div>
       </div>
       <p className="muted" style={{ marginTop: -8, maxWidth: 680 }}>
         Pagos recurrentes previstos. «Pagado» avanza la próxima fecha según la frecuencia.

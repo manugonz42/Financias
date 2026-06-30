@@ -1,5 +1,6 @@
 import { query, exec } from "../db/database";
 import { advanceDate } from "../lib/schedule";
+import { detectSubscriptions } from "./stats";
 import type { Frequency, ScheduledPayment } from "../types";
 
 export interface ScheduledRow extends ScheduledPayment {
@@ -57,4 +58,53 @@ export async function markPaid(id: number): Promise<void> {
 
 export async function deleteScheduled(id: number): Promise<void> {
   await exec("DELETE FROM scheduled_payments WHERE id = ?", [id]);
+}
+
+/** Resultado de la auto-detección de pagos recurrentes. */
+export interface AutoDetectResult {
+  created: number;
+  skipped: number;
+  names: string[];
+}
+
+/**
+ * Auto-genera pagos programados desde suscripciones detectadas.
+ * Solo crea pagos para comercios que no tengan ya un pago programado activo con el mismo nombre.
+ */
+export async function autoGenerateFromSubscriptions(): Promise<AutoDetectResult> {
+  const subs = await detectSubscriptions();
+  const existing = await listScheduled();
+  const existingNames = new Set(existing.map((s) => s.name.toLowerCase().trim()));
+
+  let created = 0;
+  let skipped = 0;
+  const names: string[] = [];
+
+  for (const sub of subs) {
+    const name = sub.merchant?.trim();
+    if (!name || existingNames.has(name.toLowerCase())) {
+      skipped++;
+      continue;
+    }
+
+    // Determinar próxima fecha: primer día del próximo mes
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const p = (n: number) => String(n).padStart(2, "0");
+    const nextDate = `${nextMonth.getFullYear()}-${p(nextMonth.getMonth() + 1)}-${p(nextMonth.getDate())}`;
+
+    await createScheduled({
+      name,
+      amount: Math.round(sub.avg_amount * 100) / 100,
+      category_id: null,
+      frequency: "mensual",
+      next_date: nextDate,
+    });
+
+    created++;
+    names.push(name);
+    existingNames.add(name.toLowerCase());
+  }
+
+  return { created, skipped, names };
 }

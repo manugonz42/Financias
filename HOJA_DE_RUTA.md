@@ -127,6 +127,21 @@ categoría. Botón «↻ Refrescar» en el dashboard.
 
 > Descartados de momento (2026-06-23): onboarding guiado y paleta de comandos (Cmd/Ctrl+K).
 
+## Fase 8 — Previsión y alertas ✅
+
+- ✅ **Previsión de flujo de caja** — proyección lineal de ingresos/gastos a 3/6/12 meses
+  con banda de confianza basada en varianza histórica. Widget "Previsión de flujo" en dashboard.
+- ✅ **Alertas de riesgo** — detección automática de saldo negativo, gasto excesivo,
+  ingreso faltante y pagos programados altos. Widget "Alertas de riesgo".
+- ✅ **Liquidez diaria proyectada** — heatmap tipo GitHub con saldo día a día proyectado.
+  Widget "Liquidez diaria".
+- ✅ **Proyección de metas** — fecha estimada de consecución basada en ritmo de ahorro actual.
+  Widget "Proyección de metas".
+- ✅ **Scheduler inteligente** — auto-generación de pagos programados desde suscripciones
+  detectadas. Botón "Auto-detectar" en Programados.
+- ✅ **Librería pura de forecast** — `src/lib/forecast.ts` con funciones testeables
+  (proyección, bandas, riesgos, metas, liquidez).
+
 ## Ideas / backlog 💡
 
 - 💡 Previsión de gastos del mes en curso según ritmo de gasto.

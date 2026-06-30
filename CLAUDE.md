@@ -51,9 +51,9 @@ npm run release       # subir versión + tag (scripts/release.mjs) → dispara C
 - **`db/`** — `schema.ts` (DDL, `CREATE TABLE IF NOT EXISTS`) · `database.ts` (conexión + init idempotente) · `seed.ts`
 - **`data/`** — capa de consultas SQL por dominio: `transactions` · `accounts` · `budgets` ·
   `categories` · `dashboard` · `stats` · `filters` · `goals` · `receipts` · `rules` ·
-  `scheduled` · `settings` · `splits` · `tickets` · `review`
+  `scheduled` · `settings` · `splits` · `tickets` · `review` · `forecast`
 - **`lib/`** — utilidades puras (testeables): `format` · `csv` · `donut` · `goals` ·
-  `schedule` · `text` · `receiptParse` · `ticketMatch`
+  `schedule` · `text` · `receiptParse` · `ticketMatch` · `forecast`
 - **`views/`** — pantallas (1 por ruta): `Dashboard` · `Movimientos` · `Importar` ·
   `Categorizar` · `Presupuestos` · `Metas` · `Programados` · `Inversiones` (hueco, sin implementar) · `Ajustes`
 - **`widgets/widgets.tsx`** — widgets reordenables del dashboard

@@ -18,6 +18,8 @@ import { donutSlices, categorySunburst } from "../lib/donut";
 import { subtreeIds } from "../data/categories";
 import { CategoryGlyph } from "../lib/icons";
 import { useApp } from "../state/AppContext";
+import { getCashFlowForecast, getRiskFlags, getLiquidityHeatmap } from "../data/forecast";
+import type { CashFlowForecast, RiskFlag, LiquidityDay } from "../lib/forecast";
 import type { Category, Goal, TxFilters } from "../types";
 import type { MonthlyFlow, BalancePoint, CashPoint, Subscription, KpiSummary, NetWorthNow, DailySpend } from "../data/stats";
 
@@ -801,6 +803,160 @@ const CatCompareBarsBody: FC<WidgetProps> = (p) => {
   );
 };
 
+/* ---- Forecast: Previsión de flujo de caja ---- */
+const CashFlowForecastBody: FC<WidgetProps> = (p) => {
+  const [forecast, setForecast] = useState<CashFlowForecast | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void getCashFlowForecast(scope(p), 3).then((data) => { if (!cancelled) setForecast(data); });
+    return () => { cancelled = true; };
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  if (!forecast) return <span className="muted">…</span>;
+  if (forecast.projected.length === 0) return <span className="muted">Sin datos suficientes.</span>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+        {forecast.projected.map((pt) => (
+          <div key={pt.month} style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 2 }}>{pt.month}</div>
+            <div style={{ fontWeight: 600, color: pt.net >= 0 ? "var(--good)" : "var(--bad)" }}>
+              {formatEUR(pt.net)}
+            </div>
+            <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
+              {formatEUR(pt.low)} – {formatEUR(pt.high)}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-dim)", textAlign: "center" }}>
+        Media: {formatEUR(forecast.avgNet)}/mes · Banda ±{(forecast.bandPct * 100).toFixed(0)}%
+      </div>
+    </div>
+  );
+};
+
+/* ---- Forecast: Alertas de riesgo ---- */
+const RiskFlagsBody: FC<WidgetProps> = (p) => {
+  const [risks, setRisks] = useState<RiskFlag[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void getRiskFlags(scope(p)).then((data) => { if (!cancelled) setRisks(data); });
+    return () => { cancelled = true; };
+  }, [p.accountId, p.from, p.to, p.excludeInternal, p.version]);
+  if (risks.length === 0) return <span className="muted">Sin alertas.</span>;
+  const sevColor = { high: "var(--bad)", medium: "var(--warn, #e6a817)", low: "var(--text-dim)" };
+  const sevIcon = { high: "!", medium: "!", low: "i" };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+      {risks.map((r, i) => (
+        <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <span style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 18, height: 18, borderRadius: 4, fontSize: 11, fontWeight: 700,
+            background: sevColor[r.severity], color: "#fff", flexShrink: 0,
+          }}>
+            {sevIcon[r.severity]}
+          </span>
+          <span style={{ flex: 1, lineHeight: 1.4 }}>{r.message}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ---- Forecast: Heatmap de liquidez ---- */
+const LiquidityHeatmapBody: FC<WidgetProps> = (p) => {
+  const [days, setDays] = useState<LiquidityDay[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void getLiquidityHeatmap(scope(p), 60).then((data) => { if (!cancelled) setDays(data); });
+    return () => { cancelled = true; };
+  }, [p.accountId, p.version]);
+  if (days.length === 0) return <span className="muted">Sin datos.</span>;
+
+  // Agrupar por semana para layout tipo GitHub
+  const weeks: LiquidityDay[][] = [];
+  let currentWeek: LiquidityDay[] = [];
+  for (const d of days) {
+    const dow = new Date(d.date).getDay();
+    if (dow === 0 && currentWeek.length > 0) {
+      weeks.push(currentWeek);
+      currentWeek = [];
+    }
+    currentWeek.push(d);
+  }
+  if (currentWeek.length > 0) weeks.push(currentWeek);
+
+  const minBal = Math.min(...days.map((d) => d.balance));
+  const maxBal = Math.max(...days.map((d) => d.balance));
+  const range = maxBal - minBal || 1;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 11 }}>
+      <div style={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+        {weeks.map((week, wi) => (
+          <div key={wi} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {week.map((d, di) => {
+              const intensity = (d.balance - minBal) / range;
+              const hue = intensity > 0.5 ? 142 : 0;
+              const sat = 40 + Math.abs(intensity - 0.5) * 60;
+              const light = 25 + (1 - Math.abs(intensity - 0.5)) * 20;
+              return (
+                <div
+                  key={di}
+                  title={`${d.date}: ${formatEUR(d.balance)}${d.isProjected ? " (proyectado)" : ""}`}
+                  style={{
+                    width: 10, height: 10, borderRadius: 2,
+                    background: `hsl(${hue}, ${sat}%, ${light}%)`,
+                    opacity: d.isProjected ? 0.7 : 1,
+                  }}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-dim)" }}>
+        <span>{formatEUR(minBal)}</span>
+        <span>{formatEUR(maxBal)}</span>
+      </div>
+    </div>
+  );
+};
+
+/* ---- Forecast: Proyección de metas de ahorro ---- */
+const GoalProjectionBody: FC<WidgetProps> = (p) => {
+  const [goals, setGoals] = useState<Goal[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void listGoals().then((data) => { if (!cancelled) setGoals(data); });
+    return () => { cancelled = true; };
+  }, [p.version]);
+  if (goals.length === 0) return <span className="muted">Define metas en «Metas».</span>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+      {goals.slice(0, 5).map((g) => {
+        const pct = g.target_amount > 0 ? Math.min(100, (g.current_amount / g.target_amount) * 100) : 0;
+        const remaining = Math.max(0, g.target_amount - g.current_amount);
+        return (
+          <div key={g.id} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>{g.icon} {g.name}</span>
+              <span style={{ color: "var(--text-dim)" }}>{pct.toFixed(0)}%</span>
+            </div>
+            <div style={{ height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${pct}%`, background: g.color || "var(--good)", borderRadius: 3 }} />
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
+              {formatEUR(g.current_amount)} / {formatEUR(g.target_amount)} · Falta {formatEUR(remaining)}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 /* ---- Debug: desglose de ingresos por categoría ---- */
 const IncomeDebugBody: FC<WidgetProps> = (p) => {
   const [rows, setRows] = useState<IncomeDebugRow[]>([]);
@@ -861,6 +1017,10 @@ export interface WidgetDef {
 export const WIDGETS: WidgetDef[] = [
   { key: "donut", title: "Gasto por categoría", w: 8, h: 10, Body: CategoryDonutBody },
   { key: "kpis", title: "Resumen del periodo", w: 4, h: 4, Body: KpiBody },
+  { key: "forecast", title: "Previsión de flujo", w: 6, h: 5, Body: CashFlowForecastBody },
+  { key: "risks", title: "Alertas de riesgo", w: 4, h: 5, Body: RiskFlagsBody },
+  { key: "liquidity", title: "Liquidez diaria", w: 6, h: 5, Body: LiquidityHeatmapBody },
+  { key: "goalproj", title: "Proyección de metas", w: 4, h: 6, Body: GoalProjectionBody },
   { key: "monthcompare", title: "Gasto: mes pasado vs este mes", w: 4, h: 4, Body: MonthCompareBody },
   { key: "monthexpense", title: "Gastos de este mes", w: 4, h: 5, Body: MonthExpenseBody },
   { key: "catcompare", title: "Comparativa por categoría", w: 4, h: 7, Body: CatCompareBody },

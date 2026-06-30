@@ -7,6 +7,12 @@
       "skillPath": "small-business/skills/cash-flow-snapshot/SKILL.md",
       "computedHash": "119ded07ccbf2e6978106dfc938bf859cb91c121eba38925774a5e8a31d74457"
     },
+    "data-visualization": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "data/skills/data-visualization/SKILL.md",
+      "computedHash": "a238cd5981b2da6bd7ecc24cfb3d7238be993ee5a2ad97acb414f9758aba13dd"
+    },
     "minimalist-ui": {
       "source": "leonxlnx/taste-skill",
       "sourceType": "github",
