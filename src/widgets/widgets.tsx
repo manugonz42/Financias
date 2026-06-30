@@ -1102,7 +1102,7 @@ const MonthMultiplesAltBody: FC<WidgetProps> = (p) => {
       if (hiddenCats.size > 0) filters.excludeCategoryIds = [...hiddenCats];
       const flows = await monthlyFlows(filters);
       const result: { label: string; categories: { name: string; value: number; color: string }[] }[] = [];
-      for (const f of flows.slice(-4)) {
+      for (const f of flows) {
         const cats = await spendByCategoryId({ ...filters, month: f.month });
         const catMap = new Map(categories.map((c) => [c.id, c]));
         result.push({
