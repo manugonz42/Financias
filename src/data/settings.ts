@@ -1,6 +1,7 @@
 import { query, exec } from "../db/database";
 import { isPaletteId, type PaletteId } from "../lib/palettes";
 import { isIconStyle, type IconStyle } from "../lib/icons";
+import { isWidgetLook, DEFAULT_WIDGET_LOOK, type WidgetLook } from "../lib/widgetLook";
 
 export async function getSetting(key: string): Promise<string | null> {
   const row = (await query<{ value: string }>("SELECT value FROM settings WHERE key = ?", [
@@ -55,6 +56,16 @@ export async function getChartPalette(): Promise<PaletteId> {
 
 export async function setChartPalette(v: PaletteId): Promise<void> {
   await setSetting("chart_palette", v);
+}
+
+/** Estilo global de los widgets "pro" (minimal | colorful | aurora). */
+export async function getWidgetLook(): Promise<WidgetLook> {
+  const v = await getSetting("widget_look");
+  return isWidgetLook(v) ? v : DEFAULT_WIDGET_LOOK;
+}
+
+export async function setWidgetLook(v: WidgetLook): Promise<void> {
+  await setSetting("widget_look", v);
 }
 
 export async function getIconStyle(): Promise<IconStyle> {

@@ -7,11 +7,16 @@ import { useApp } from "../state/AppContext";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AccountSelector, DateRange, ExcludeInternalToggle } from "../components/Controls";
 import { WIDGETS, type WidgetProps, type WidgetDef } from "../widgets/widgets";
+import { PRO_WIDGETS } from "../widgets/proWidgets";
+import { WIDGET_LOOKS, widgetLookLabel } from "../lib/widgetLook";
 import { dateBounds } from "../data/transactions";
 import { loadLayout, saveLayoutItem, setWidgetVisible, resetLayout } from "../data/dashboard";
 
 const ReactGridLayout = WidthProvider(GridLayout);
 const COLS = 12;
+
+/** Registro completo de widgets: los clásicos + la tanda "pro". */
+const ALL_WIDGETS: WidgetDef[] = [...WIDGETS, ...PRO_WIDGETS];
 
 interface WState {
   key: string;
@@ -42,7 +47,7 @@ function flowPack(list: { key: string; w: number; h: number }[]): Map<string, { 
 }
 
 export function Dashboard() {
-  const { accountId, excludeInternal, version, reload } = useApp();
+  const { accountId, excludeInternal, version, reload, widgetLook, setWidgetLook } = useApp();
   const [bounds, setBounds] = useState<{ min: string; max: string } | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -66,21 +71,21 @@ export function Dashboard() {
 
       let list: WState[];
       if (legacy) {
-        const ordered = [...WIDGETS].sort(
+        const ordered = [...ALL_WIDGETS].sort(
           (a, b2) => (byKey.get(a.key)?.x ?? 999) - (byKey.get(b2.key)?.x ?? 999),
         );
         const pos = flowPack(
           ordered.map((w) => ({ key: w.key, w: byKey.get(w.key)?.w ?? w.w, h: byKey.get(w.key)?.h ?? w.h })),
         );
-        list = WIDGETS.map((w) => {
+        list = ALL_WIDGETS.map((w) => {
           const p = pos.get(w.key)!;
           const r = byKey.get(w.key);
           return { key: w.key, x: p.x, y: p.y, w: p.w, h: p.h, visible: r ? !!r.visible : true };
         });
       } else {
         const maxY = rows.length ? Math.max(...rows.map((r) => r.y + r.h)) : 0;
-        const missing = flowPack(WIDGETS.filter((w) => !byKey.has(w.key)).map((w) => ({ key: w.key, w: w.w, h: w.h })));
-        list = WIDGETS.map((w) => {
+        const missing = flowPack(ALL_WIDGETS.filter((w) => !byKey.has(w.key)).map((w) => ({ key: w.key, w: w.w, h: w.h })));
+        list = ALL_WIDGETS.map((w) => {
           const r = byKey.get(w.key);
           if (r) return { key: w.key, x: r.x, y: r.y, w: r.w, h: r.h, visible: !!r.visible };
           const p = missing.get(w.key)!;
@@ -157,11 +162,22 @@ export function Dashboard() {
           <AccountSelector />
           <DateRange from={from} to={to} onFrom={setFrom} onTo={setTo} min={bounds?.min} max={bounds?.max} />
           <ExcludeInternalToggle />
+          <select
+            value={widgetLook}
+            onChange={(e) => setWidgetLook(e.target.value as typeof widgetLook)}
+            title="Estilo de los widgets nuevos (los que no tengan estilo propio)"
+          >
+            {WIDGET_LOOKS.map((l) => (
+              <option key={l} value={l}>
+                Estilo: {widgetLookLabel(l)}
+              </option>
+            ))}
+          </select>
           {hidden.length > 0 && (
             <select value="" onChange={(e) => e.target.value && show(e.target.value)} title="Añadir widget">
               <option value="">+ Añadir widget</option>
               {hidden.map((it) => {
-                const def = WIDGETS.find((w) => w.key === it.key);
+                const def = ALL_WIDGETS.find((w) => w.key === it.key);
                 return (
                   <option key={it.key} value={it.key}>
                     {def?.title ?? it.key}
@@ -193,7 +209,7 @@ export function Dashboard() {
           resizeHandles={["se"]}
         >
           {visibleItems.map((it) => {
-            const def = WIDGETS.find((w) => w.key === it.key);
+            const def = ALL_WIDGETS.find((w) => w.key === it.key);
             if (!def) return <div key={it.key} />;
             return (
               <div

@@ -9,9 +9,10 @@ import {
 import type { Account, Category } from "../types";
 import { listAccounts } from "../data/accounts";
 import { listCategories } from "../data/categories";
-import { getExcludeInternal, setExcludeInternal as persistExcl, getOwnerName, getTheme, setThemeSetting, getChartPalette, setChartPalette, getIconStyle, setIconStyle as persistIconStyle, type Theme } from "../data/settings";
+import { getExcludeInternal, setExcludeInternal as persistExcl, getOwnerName, getTheme, setThemeSetting, getChartPalette, setChartPalette, getIconStyle, setIconStyle as persistIconStyle, getWidgetLook, setWidgetLook as persistWidgetLook, type Theme } from "../data/settings";
 import type { PaletteId } from "../lib/palettes";
 import type { IconStyle } from "../lib/icons";
+import { DEFAULT_WIDGET_LOOK, type WidgetLook } from "../lib/widgetLook";
 
 interface AppState {
   accounts: Account[];
@@ -35,6 +36,9 @@ interface AppState {
   /** Estilo de iconos global: emoji a color ("color") o Lucide outline ("linear"). */
   iconStyle: IconStyle;
   setIconStyle: (s: IconStyle) => void;
+  /** Estilo visual global de los widgets "pro". Cada widget puede sobreescribirlo. */
+  widgetLook: WidgetLook;
+  setWidgetLook: (l: WidgetLook) => void;
   /** Muestra un aviso breve (toast). */
   toast: (msg: string) => void;
   /** Muestra un toast con botón de acción (p.ej. "Deshacer"). Se cierra al hacer clic o tras 5s. */
@@ -56,6 +60,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
   const [palette, setPaletteState] = useState<PaletteId>("categoria");
   const [iconStyle, setIconStyleState] = useState<IconStyle>("color");
+  const [widgetLook, setWidgetLookState] = useState<WidgetLook>(DEFAULT_WIDGET_LOOK);
   const [toasts, setToasts] = useState<{ id: number; msg: string; action?: { label: string; onAction: () => void } }[]>([]);
   const [version, setVersion] = useState(0);
 
@@ -77,7 +82,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [accs, cats, excl, owner, th, pal, iStyle] = await Promise.all([
+      const [accs, cats, excl, owner, th, pal, iStyle, look] = await Promise.all([
         listAccounts(),
         listCategories(),
         getExcludeInternal(),
@@ -85,6 +90,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getTheme(),
         getChartPalette(),
         getIconStyle(),
+        getWidgetLook(),
       ]);
       if (cancelled) return;
       setAccounts(accs);
@@ -94,6 +100,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setThemeState(th);
       setPaletteState(pal);
       setIconStyleState(iStyle);
+      setWidgetLookState(look);
       document.documentElement.setAttribute("data-theme", th);
       setLoading(false);
     })();
@@ -129,6 +136,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void persistIconStyle(s);
   }, []);
 
+  const setWidgetLook = useCallback((l: WidgetLook) => {
+    setWidgetLookState(l);
+    void persistWidgetLook(l).then(() => setVersion((v) => v + 1));
+  }, []);
+
   return (
     <Ctx.Provider
       value={{
@@ -148,6 +160,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setPalette,
         iconStyle,
         setIconStyle,
+        widgetLook,
+        setWidgetLook,
         toast,
         toastWithAction,
         version,
