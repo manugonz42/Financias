@@ -90,8 +90,8 @@ export function projectMonthlyFlows(
       income: Math.max(0, projIncome),
       expense: Math.max(0, projExpense),
       net: projNet,
-      low: projNet * (1 - bandPct),
-      high: projNet * (1 + bandPct),
+      low: projNet - Math.abs(projNet) * bandPct,
+      high: projNet + Math.abs(projNet) * bandPct,
       projected: true,
     });
   }
@@ -220,8 +220,10 @@ export function projectGoal(
   if (goal.target_date) {
     const target = new Date(goal.target_date + "T00:00:00");
     const now = new Date();
-    const monthsLeft = Math.max(1, (target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
-    monthlyNeeded = remaining / monthsLeft;
+    const ms = target.getTime() - now.getTime();
+    if (ms > 0) {
+      monthlyNeeded = remaining / (ms / (1000 * 60 * 60 * 24 * 30.44));
+    }
   }
 
   let estimatedDate: string | null = null;

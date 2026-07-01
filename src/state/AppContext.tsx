@@ -111,8 +111,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Aplica el atributo de inmediato para que los gráficos lean los colores nuevos.
     document.documentElement.setAttribute("data-theme", t);
     setThemeState(t);
-    void setThemeSetting(t);
-    setVersion((v) => v + 1); // re-render de widgets/gráficos con el tema nuevo
+    // Espera a que el write termine antes de incrementar version para evitar
+    // que el useEffect lea el tema antiguo de la BD y revierta el cambio.
+    void setThemeSetting(t).then(() => setVersion((v) => v + 1));
   }, []);
 
   const isMinimalist = theme === "minimalist" || theme === "minimalist-dark";
@@ -120,8 +121,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setPalette = useCallback((p: PaletteId) => {
     setPaletteState(p);
-    void setChartPalette(p);
-    setVersion((v) => v + 1); // re-render de gráficos con la paleta nueva
+    void setChartPalette(p).then(() => setVersion((v) => v + 1));
   }, []);
 
   const setIconStyle = useCallback((s: IconStyle) => {

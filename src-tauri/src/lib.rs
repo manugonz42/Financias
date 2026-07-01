@@ -7,8 +7,17 @@ fn read_file_bytes(path: String) -> Result<Vec<u8>, String> {
 }
 
 // Escribe texto en disco (p.ej. exportar a CSV en la ruta elegida en el diálogo).
+// Solo permite extensiones de texto/datos para evitar escritura arbitraria de ficheros.
 #[tauri::command]
 fn write_text_file(path: String, contents: String) -> Result<(), String> {
+    let path_lower = path.to_lowercase();
+    let allowed = ["csv", "txt", "json"];
+    if !allowed.iter().any(|ext| path_lower.ends_with(&format!(".{ext}"))) {
+        return Err(format!(
+            "Extensión no permitida. Solo se puede escribir ficheros: {}",
+            allowed.join(", ")
+        ));
+    }
     std::fs::write(&path, contents).map_err(|e| e.to_string())
 }
 

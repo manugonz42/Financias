@@ -126,7 +126,7 @@ export async function getLiquidityHeatmap(
      FROM transactions t ${clause}`,
     params,
   );
-  const avgDailyNet = rows[0]?.net ?? 0;
+  const avgDailyNet = (rows[0]?.net ?? 0) / 30;
 
   return projectDailyLiquidity(balance, avgDailyNet, daysAhead);
 }

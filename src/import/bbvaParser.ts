@@ -201,8 +201,8 @@ function buildTransaction(rec: Record, warnings: string[]): ParsedTransaction | 
 
   try {
     return {
-      fechaOperacion: toISODate(fechaOp),
-      fechaValor: toISODate(fechaVal),
+      fechaOperacion: toISODate(fechaOp.trim()),
+      fechaValor: toISODate(fechaVal.trim()),
       concepto,
       importe: parseBbvaAmount(importeTok.str),
       saldo: parseBbvaAmount(saldoTok.str),

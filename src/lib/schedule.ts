@@ -9,7 +9,11 @@ export function advanceDate(iso: string, freq: Frequency): string {
   const d = new Date(y, m - 1, day);
   if (freq === "semanal") d.setDate(d.getDate() + 7);
   else if (freq === "anual") d.setFullYear(d.getFullYear() + 1);
-  else d.setMonth(d.getMonth() + 1); // mensual
+  else {
+    const day = d.getDate();
+    d.setMonth(d.getMonth() + 1);
+    if (d.getDate() !== day) d.setDate(0); // clampea al último día del mes destino
+  }
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }

@@ -131,7 +131,7 @@ export function Movimientos() {
 
   const sortedRows = useMemo(() => {
     const r = [...rows];
-    if (sort === "fecha-asc") r.reverse();
+    if (sort === "fecha-asc") r.sort((a, b) => a.fecha_operacion.localeCompare(b.fecha_operacion) || a.id - b.id);
     else if (sort === "imp-desc") r.sort((a, b) => Math.abs(b.importe) - Math.abs(a.importe));
     else if (sort === "imp-asc") r.sort((a, b) => Math.abs(a.importe) - Math.abs(b.importe));
     return r; // fecha-desc: ya viene así

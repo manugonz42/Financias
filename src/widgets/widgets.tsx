@@ -880,7 +880,7 @@ const LiquidityHeatmapBody: FC<WidgetProps> = (p) => {
   const weeks: LiquidityDay[][] = [];
   let currentWeek: LiquidityDay[] = [];
   for (const d of days) {
-    const dow = new Date(d.date).getDay();
+    const dow = new Date(d.date + "T00:00:00").getDay();
     if (dow === 0 && currentWeek.length > 0) {
       weeks.push(currentWeek);
       currentWeek = [];
@@ -964,6 +964,7 @@ const CashFlowBarsAltBody: FC<WidgetProps> = (p) => {
   const [data, setData] = useState<MonthlyFlow[]>([]);
   const [from, setFrom] = useState(p.from);
   const [to, setTo] = useState(p.to);
+  useEffect(() => { setFrom(p.from); setTo(p.to); }, [p.from, p.to]);
   useEffect(() => {
     let cancelled = false;
     void monthlyFlows({ ...scope(p), from, to }).then((d) => { if (!cancelled) setData(d); });
@@ -987,6 +988,7 @@ const CategoryLollipopAltBody: FC<WidgetProps> = (p) => {
   const [hiddenCats, setHiddenCats] = useState<Set<number>>(new Set());
   const [from, setFrom] = useState(p.from);
   const [to, setTo] = useState(p.to);
+  useEffect(() => { setFrom(p.from); setTo(p.to); }, [p.from, p.to]);
   const toggleHidden = (id: number) => {
     setHiddenCats((prev) => {
       const next = new Set(prev);
@@ -1025,6 +1027,7 @@ const InsightLineAltBody: FC<WidgetProps> = (p) => {
   const [hiddenCats, setHiddenCats] = useState<Set<number>>(new Set());
   const [from, setFrom] = useState(p.from);
   const [to, setTo] = useState(p.to);
+  useEffect(() => { setFrom(p.from); setTo(p.to); }, [p.from, p.to]);
   const toggleHidden = (id: number) => {
     setHiddenCats((prev) => {
       const next = new Set(prev);
@@ -1062,6 +1065,7 @@ const SavingsGaugeAltBody: FC<WidgetProps> = (p) => {
   const [rate, setRate] = useState(0);
   const [from, setFrom] = useState(p.from);
   const [to, setTo] = useState(p.to);
+  useEffect(() => { setFrom(p.from); setTo(p.to); }, [p.from, p.to]);
   useEffect(() => {
     let cancelled = false;
     void kpis({ ...scope(p), from, to }).then((k) => {
@@ -1087,6 +1091,7 @@ const MonthMultiplesAltBody: FC<WidgetProps> = (p) => {
   const [hiddenCats, setHiddenCats] = useState<Set<number>>(new Set());
   const [from, setFrom] = useState(p.from);
   const [to, setTo] = useState(p.to);
+  useEffect(() => { setFrom(p.from); setTo(p.to); }, [p.from, p.to]);
   const toggleHidden = (id: number) => {
     setHiddenCats((prev) => {
       const next = new Set(prev);
