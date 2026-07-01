@@ -33,8 +33,9 @@ Leyenda: ✅ hecho · 🔄 en curso · ⏳ pendiente · 💡 idea/backlog
 ## Fase 3 — Dashboard ✅
 
 - ✅ Grid de **widgets reordenables y ocultables** (react-grid-layout); el layout
-  se guarda en SQLite.
-- ✅ Gráficos (ECharts): donut por categoría, barras gasto/ingreso, línea de saldo, KPIs.
+  se guarda en SQLite (`dashboard_layout`).
+- ✅ Gráficos (**Nivo**, antes ECharts): donut por categoría, barras gasto/ingreso, línea de
+  saldo, KPIs. Registro de widgets en `src/widgets/widgets.tsx` (`WIDGETS`).
 - ✅ Selector de cuenta: Nómina / Ahorro / Ambas.
 
 ## Fase 4 — Análisis ✅
@@ -124,6 +125,11 @@ categoría. Botón «↻ Refrescar» en el dashboard.
 - ✅ **Drill-down de categoría** — clic en una porción del donut → desglose de sus subcategorías.
 - ✅ **Densidad y jerarquía en la tabla de movimientos** — badge de categoría con color, color por
   signo, agrupación por fecha (con toggle) y orden por fecha/importe.
+- ✅ **Widgets "pro" con 3 estilos conmutables** — tanda nueva de 8 gráficos
+  (`src/widgets/proWidgets.tsx` + `components/charts/nivo-pro.tsx`): tendencia, liquidez,
+  sunburst, cajero, saldo, gastos vs ingresos, comparativa por categoría y resumen. Cada uno
+  alterna minimal / colorful (colorblind-friendly) / aurora (degradado + animación) con botón
+  por widget y selector global; el estilo se persiste en `settings` (`widget_look`, `look:<key>`).
 
 > Descartados de momento (2026-06-23): onboarding guiado y paleta de comandos (Cmd/Ctrl+K).
 
